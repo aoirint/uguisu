@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:isolate';
 import 'package:logging/logging.dart';
 
 class NiconicoLiveCommentServerEmulator {
