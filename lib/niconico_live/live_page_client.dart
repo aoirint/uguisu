@@ -19,8 +19,11 @@ class NiconicoLivePageClient {
 
   Future<NiconicoLivePage> get({
     required Uri uri,
+    required String userAgent,
   }) async {
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: {
+      'User-Agent': userAgent,
+    });
     if (response.statusCode != 200) {
       throw Exception('Request failed. Status ${response.statusCode}');
     }

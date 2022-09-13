@@ -3,6 +3,7 @@ import 'package:uguisu/niconico_live/niconico_live.dart';
 
 Future<void> __startCommentClient({
   required String commentServerWebSocketUrl,
+  required String userAgent,
   required String thread,
   String? threadkey,
   required Function(ChatMessage) onChatMessage,
@@ -11,6 +12,7 @@ Future<void> __startCommentClient({
   try {
     await commentClient.connect(
       websocketUrl: commentServerWebSocketUrl,
+      userAgent: userAgent,
       thread: thread,
       threadkey: threadkey,
       onChatMessage: onChatMessage,
@@ -30,14 +32,18 @@ Future<void> main() async {
 
   final logger = Logger('main');
 
+  const userAgent = 'uguisu/0.0.0';
 
   final livePageServer = NiconicoLivePageServerEmulator();
   try {
     await livePageServer.start('127.0.0.1', 10080);
 
     final livePageClient = NiconicoLivePageClient();
-    final livePage = await livePageClient.get(uri: Uri.parse('http://127.0.0.1:10080/'));
-    
+    final livePage = await livePageClient.get(
+      uri: Uri.parse('http://127.0.0.1:10080/'),
+      userAgent: userAgent,
+    );
+
     final watchServerWebSocketUrl = livePage.webSocketUrl;
 
     final watchServer = NiconicoLiveWatchServerEmulator();
@@ -54,10 +60,12 @@ Future<void> main() async {
         try {
           await watchClient.connect(
             websocketUrl: watchServerWebSocketUrl,
+            userAgent: userAgent,
             onRoomMessage: (roomMessage) {
               commentClients.add(
                 __startCommentClient(
                   commentServerWebSocketUrl: roomMessage.messageServer.uri,
+                  userAgent: userAgent,
                   thread: roomMessage.threadId,
                   threadkey: roomMessage.yourPostKey,
                   onChatMessage: (chat) {
