@@ -74,6 +74,9 @@ Future<void> main() async {
                 )
               );
             },
+            onStatisticsMessage: (statisticsMessage) {
+              logger.info('Statistics: viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
+            },
           );
 
           await Future.delayed(const Duration(seconds: 5));

@@ -41,9 +41,24 @@ class RoomMessage {
   });
 }
 
+class StatisticsMessage {
+  int viewers;
+  int comments;
+  int adPoints;
+  int giftPoints;
+
+  StatisticsMessage({
+    required this.viewers,
+    required this.comments,
+    required this.adPoints,
+    required this.giftPoints,
+  });
+}
+
 class NiconicoLiveWatchClient {
   WebSocket? client;
   Function(RoomMessage roomMessage)? onRoomMessage;
+  Function(StatisticsMessage statisticsMessage)? onStatisticsMessage;
   ReceivePort? keepSeatTimingReceivePort;
   SendPort? keepSeatTimingSendPort;
   Isolate? keepSeatTimingIsolate;
@@ -60,6 +75,7 @@ class NiconicoLiveWatchClient {
     required String websocketUrl,
     required String userAgent,
     required Function(RoomMessage roomMessage) onRoomMessage,
+    required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
   }) async {
     logger.info('connect to $websocketUrl');
 
@@ -155,6 +171,7 @@ class NiconicoLiveWatchClient {
     ));
 
     this.onRoomMessage = onRoomMessage;
+    this.onStatisticsMessage = onStatisticsMessage;
   }
 
   Future<void> stop() async {
@@ -205,6 +222,14 @@ class NiconicoLiveWatchClient {
         vposBaseTime: data['vposBaseTime'],
         waybackkey: data['waybackkey'],
         yourPostKey: data['yourPostKey'],
+      ));
+    } else if (type == 'statistics') {
+      final data = message['data'];
+      onStatisticsMessage?.call(StatisticsMessage(
+        viewers: data['viewers'],
+        comments: data['comments'],
+        adPoints: data['adPoints'],
+        giftPoints: data['giftPoints'],
       ));
     }
   }
