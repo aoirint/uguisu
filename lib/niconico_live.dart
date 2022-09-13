@@ -51,6 +51,9 @@ Future<void> main(List<String> args) async {
       var running = true;
       // var finishedAt = DateTime.now().add(const Duration(seconds: 120));
 
+      // Akashic
+      // ?: 放送者フォロー
+
       await simpleClient.connect(
         livePageUrl: livePageUrl, // for test: http://127.0.0.1:10080, for real case: https://live.nicovideo.jp/watch/lv000000000
         onScheduleMessage: (scheduleMessage) {
@@ -76,9 +79,10 @@ Future<void> main(List<String> args) async {
             }
 
             if (comment.startsWith('/info')) {
-              // 3: 延長
-              // 8: ランキング
-              // 10: 来場者
+              // 3: 延長 | /info 3 30分延長しました
+              // 8: ランキング | /info 8 第7位にランクインしました
+              // 10: 来場者 | /info 10 「DUMMY」が好きな1人が来場しました
+              // ?: 好きなものリスト追加
               final infoRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
               final infoArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(infoRawMessage)[0];
               final infoId = infoArgs[0];
