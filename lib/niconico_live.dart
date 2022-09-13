@@ -138,7 +138,6 @@ class NiconicoLiveCommentServerEmulator {
   }
 
   Future<void> __startDummyThread(WebSocket ws) async {
-    // TODO: impl dummy comments
     const thread = 'dummy_thread';
 
     ws.add(jsonEncode({ 'ping': { 'content': 'rs:0' } }));
@@ -146,7 +145,7 @@ class NiconicoLiveCommentServerEmulator {
 
     ws.add(jsonEncode({
       'thread': {
-        'last_res': 1,
+        'last_res': 10,
         'resultcode': 0,
         'revision': 1,
         'servertime': 1663052000,
@@ -155,23 +154,42 @@ class NiconicoLiveCommentServerEmulator {
       },
     }));
 
+    for (var commentNo=1; commentNo<=10; commentNo+=1) {
+      ws.add(jsonEncode({
+        'chat': {
+          'anonimity': 1, // optional, only if 184
+          'content': 'mycontent $commentNo',
+          'date': 1663052000 + commentNo,
+          'date_usec': 660000,
+          'no': commentNo,
+          'premium': 1, // optional
+          'thread': thread,
+          'mail': '184', // optional, only if 184
+          'user_id': '100',
+          'vpos': 212814,
+        },
+      }));
+    }
+
     ws.add(jsonEncode({ 'ping': { 'content': 'pf:0' } }));
     ws.add(jsonEncode({ 'ping': { 'content': 'rf:0' } }));
 
-    ws.add(jsonEncode({
-      'chat': {
-        'anonimity': 1, // optional, only if 184
-        'content': 'mycontent',
-        'date': 1663052000,
-        'date_usec': 660000,
-        'no': 1,
-        'premium': 1, // optional
-        'thread': thread,
-        'mail': '184', // optional, only if 184
-        'user_id': '100',
-        'vpos': 212814,
-      },
-    }));
+    for (var commentNo=11; commentNo<=20; commentNo+=1) {
+      ws.add(jsonEncode({
+        'chat': {
+          'anonimity': 1, // optional, only if 184
+          'content': 'mycontent $commentNo',
+          'date': 1663052000 + commentNo, // utc timestamp
+          'date_usec': 660000,
+          'no': commentNo,
+          'premium': 1, // optional
+          'thread': thread,
+          'mail': '184', // optional, only if 184
+          'user_id': '100',
+          'vpos': 212814,
+        },
+      }));
+    }
     await Future.delayed(const Duration(milliseconds: 100));
   }
 }
