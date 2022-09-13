@@ -49,7 +49,7 @@ Future<void> main(List<String> args) async {
     await simpleServer.start();
     try {
       var running = true;
-      var finishedAt = DateTime.now().add(const Duration(seconds: 120));
+      // var finishedAt = DateTime.now().add(const Duration(seconds: 120));
 
       await simpleClient.connect(
         livePageUrl: livePageUrl, // for test: http://127.0.0.1:10080, for real case: https://live.nicovideo.jp/watch/lv000000000
@@ -77,15 +77,18 @@ Future<void> main(List<String> args) async {
 
             if (comment.startsWith('/info')) {
               // 3: 延長
+              // 8: ランキング
               // 10: 来場者
-              final infoId = comment.substring(comment.indexOf(' ')+1).trim();
-              final infoMessage = comment.substring(comment.indexOf(' ', comment.indexOf(' ')+1)).trim();
+              final infoRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+              final infoArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(infoRawMessage)[0];
+              final infoId = infoArgs[0];
+              final infoMessage = infoArgs[1];
               logger.info('Info $infoId $infoMessage');
             }
 
             if (comment.startsWith('/spi')) {
               // 放送ネタ
-              var spiRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+              final spiRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
               final spiArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(spiRawMessage)[0];
               final spiMessage = spiArgs[0];
 
@@ -129,10 +132,10 @@ Future<void> main(List<String> args) async {
       );
 
       while (running) {
-        if (finishedAt.isBefore(DateTime.now())) {
-          running = false;
-          break;
-        }
+        // if (finishedAt.isBefore(DateTime.now())) {
+        //   running = false;
+        //   break;
+        // }
         await Future.delayed(const Duration(milliseconds: 10));
       }
     } finally {
