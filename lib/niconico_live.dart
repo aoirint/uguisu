@@ -278,18 +278,18 @@ class NiconicoLiveCommentClient {
     );
 
     final threadObj = {
-        'nicoru': 0,
-        'res_from': -150,
-        'scores': 1,
-        'thread': thread,
-        'user_id': 'guest',
-        'version': '20061206',
-        'with_global': 1,
-      };
+      'nicoru': 0,
+      'res_from': -150,
+      'scores': 1,
+      'thread': thread,
+      'user_id': 'guest',
+      'version': '20061206',
+      'with_global': 1,
+    };
 
-      if (threadkey != null) {
-        threadObj['threadkey'] = threadkey;
-      }
+    if (threadkey != null) {
+      threadObj['threadkey'] = threadkey;
+    }
 
     client.add(jsonEncode([
       { 'ping': { 'content': 'rs:0' } },
@@ -337,6 +337,8 @@ Future<void> main() async {
     print('${record.loggerName}: ${record.level.name}: ${record.time}: ${record.message}');
   });
 
+  final logger = Logger('main');
+
   final watchServer = NiconicoLiveWatchServerEmulator();
   try {
     await watchServer.start("127.0.0.1", 10080);
@@ -373,5 +375,5 @@ Future<void> main() async {
     await watchServer.stop();
   }
 
-  print('exit');
+  logger.info('exit');
 }
