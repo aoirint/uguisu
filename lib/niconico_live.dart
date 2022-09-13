@@ -74,6 +74,9 @@ Future<void> main() async {
                 )
               );
             },
+            onScheduleMessage: (scheduleMessage) {
+              logger.info('Schedule: begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
+            },
             onStatisticsMessage: (statisticsMessage) {
               logger.info('Statistics: viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
             },

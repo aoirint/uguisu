@@ -41,6 +41,16 @@ class RoomMessage {
   });
 }
 
+class ScheduleMessage {
+  String begin;
+  String end;
+
+  ScheduleMessage({
+    required this.begin,
+    required this.end,
+  });
+}
+
 class StatisticsMessage {
   int viewers;
   int comments;
@@ -58,6 +68,7 @@ class StatisticsMessage {
 class NiconicoLiveWatchClient {
   WebSocket? client;
   Function(RoomMessage roomMessage)? onRoomMessage;
+  Function(ScheduleMessage scheduleMessage)? onScheduleMessage;
   Function(StatisticsMessage statisticsMessage)? onStatisticsMessage;
   ReceivePort? keepSeatTimingReceivePort;
   SendPort? keepSeatTimingSendPort;
@@ -75,6 +86,7 @@ class NiconicoLiveWatchClient {
     required String websocketUrl,
     required String userAgent,
     required Function(RoomMessage roomMessage) onRoomMessage,
+    required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
   }) async {
     logger.info('connect to $websocketUrl');
@@ -171,6 +183,7 @@ class NiconicoLiveWatchClient {
     ));
 
     this.onRoomMessage = onRoomMessage;
+    this.onScheduleMessage = onScheduleMessage;
     this.onStatisticsMessage = onStatisticsMessage;
   }
 
@@ -222,6 +235,12 @@ class NiconicoLiveWatchClient {
         vposBaseTime: data['vposBaseTime'],
         waybackkey: data['waybackkey'],
         yourPostKey: data['yourPostKey'],
+      ));
+    } else if (type == 'schedule') {
+      final data = message['data'];
+      onScheduleMessage?.call(ScheduleMessage(
+        begin: data['begin'],
+        end: data['end'],
       ));
     } else if (type == 'statistics') {
       final data = message['data'];

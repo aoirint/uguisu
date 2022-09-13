@@ -68,6 +68,13 @@ class NiconicoLiveWatchServerEmulator {
             },
           }));
           ws.add(jsonEncode({
+            'type': 'schedule',
+            'data': {
+              'begin': '2022-09-13T12:00:00+09:00',
+              'end': '2022-09-13T18:00:00+09:00',
+            },
+          }));
+          ws.add(jsonEncode({
             'type': 'statistics',
             'data': {
               'viewers': 100,
