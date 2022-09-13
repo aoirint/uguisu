@@ -99,7 +99,7 @@ class NiconicoLiveCommentServerEmulator {
     ws.add(jsonEncode({ 'ping': { 'content': 'pf:0' } }));
     ws.add(jsonEncode({ 'ping': { 'content': 'rf:0' } }));
 
-    for (var commentNo=11; commentNo<=20; commentNo+=1) {
+    for (var commentNo=11; commentNo<=15; commentNo+=1) {
       ws.add(jsonEncode({
         'chat': {
           'anonimity': 1, // optional, only if 184
@@ -110,6 +110,19 @@ class NiconicoLiveCommentServerEmulator {
           'premium': 1, // optional
           'thread': thread,
           'mail': '184', // optional, only if 184
+          'user_id': 'dummy_184_user_id',
+          'vpos': 212814,
+        },
+      }));
+    }
+    for (var commentNo=16; commentNo<=20; commentNo+=1) {
+      ws.add(jsonEncode({
+        'chat': {
+          'content': 'mycontent $commentNo',
+          'date': 1663052000 + commentNo, // utc timestamp
+          'date_usec': 660000,
+          'no': commentNo,
+          'thread': thread,
           'user_id': '100',
           'vpos': 212814,
         },
