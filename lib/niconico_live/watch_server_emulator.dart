@@ -67,6 +67,15 @@ class NiconicoLiveWatchServerEmulator {
               'yourPostKey': 'dummy_thread_key',
             },
           }));
+          ws.add(jsonEncode({
+            'type': 'statistics',
+            'data': {
+              'viewers': 100,
+              'comments': 200,
+              'adPoints': 300,
+              'giftPoints': 400,
+            },
+          }));
         } else if (type == 'pong') {
         } else if (type == 'keepSeat') {
         }
