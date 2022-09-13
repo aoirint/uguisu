@@ -105,7 +105,7 @@ Future<void> main(List<String> args) async {
               final totalAdPoint = nicoAdMessage['totalAdPoint'];
               final message = nicoAdMessage['message'];
 
-              logger.info('Nicoad $totalAdPoint $message');
+              logger.info('Nicoad version=$nicoAdVersion totalAdPoint=$totalAdPoint message=$message');
             }
 
             if (comment.startsWith('/gift')) {
