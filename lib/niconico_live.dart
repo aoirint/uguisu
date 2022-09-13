@@ -39,6 +39,9 @@ Future<void> main() async {
   try {
     await simpleServer.start();
     try {
+      var running = true;
+      var finishedAt = DateTime.now().add(const Duration(seconds: 5));
+
       await simpleClient.connect(
         livePageUrl: 'http://127.0.0.1:10080',
         onScheduleMessage: (scheduleMessage) {
@@ -48,11 +51,22 @@ Future<void> main() async {
           logger.info('Statistics: viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
         },
         onChatMessage: (chatMessage) {
+          if (chatMessage.premium == 2) { // 運営コメント
+            if (chatMessage.content == '/disconnect') { // 番組終了
+              running = false;
+            }
+          }
           logger.info('Chat by user/${chatMessage.userId}: ${chatMessage.content}');
         },
       );
 
-      await Future.delayed(const Duration(seconds: 5));
+      while (running) {
+        if (finishedAt.isBefore(DateTime.now())) {
+          running = false;
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
     } finally {
       await simpleClient.stop();
     }

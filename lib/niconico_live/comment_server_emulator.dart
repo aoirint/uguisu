@@ -128,6 +128,20 @@ class NiconicoLiveCommentServerEmulator {
         },
       }));
     }
-    await Future.delayed(const Duration(milliseconds: 100));
+    await Future.delayed(const Duration(seconds: 1));
+    ws.add(jsonEncode({
+      'chat': {
+        'anonimity': 1, // optional, only if 184
+        'content': '/disconnect',
+        'date': 1663052000 + 21, // utc timestamp
+        'date_usec': 660000,
+        'no': 21,
+        'premium': 2,
+        'thread': thread,
+        'mail': '184', // optional, only if 184
+        'user_id': '100',
+        'vpos': 212814,
+      },
+    }));
   }
 }
