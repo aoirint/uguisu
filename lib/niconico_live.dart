@@ -50,22 +50,23 @@ Future<void> main() async {
 
         final commentClients = <Future>[];
 
-        final watchClient = NiconicoLiveWatchClient(
-          onRoomMessage: (threadId, yourPostkey) {
-            commentClients.add(
-              __startCommentClient(
-                commentServerWebSocketUrl: 'ws://127.0.0.1:10082/',
-                thread: threadId,
-                threadkey: yourPostkey,
-                onChatMessage: (chat) {
-                  logger.info('Chat by user/${chat.userId}: ${chat.content}');
-                },
-              )
-            );
-          },
-        );
+        final watchClient = NiconicoLiveWatchClient();
         try {
-          await watchClient.connect(watchServerWebSocketUrl);
+          await watchClient.connect(
+            websocketUrl: watchServerWebSocketUrl,
+            onRoomMessage: (roomMessage) {
+              commentClients.add(
+                __startCommentClient(
+                  commentServerWebSocketUrl: roomMessage.messageServer.uri,
+                  thread: roomMessage.threadId,
+                  threadkey: roomMessage.yourPostKey,
+                  onChatMessage: (chat) {
+                    logger.info('Chat by user/${chat.userId}: ${chat.content}');
+                  },
+                )
+              );
+            },
+          );
 
           await Future.delayed(const Duration(seconds: 5));
 

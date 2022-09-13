@@ -42,7 +42,7 @@ class NiconicoLiveCommentClient {
   SendPort? pingTimingSendPort;
   Isolate? pingTimingIsolate;
   Duration pingInterval;
-  Function(ChatMessage)? onChatMessage;
+  Function(ChatMessage chatMessage)? onChatMessage;
   late Logger logger;
 
   NiconicoLiveCommentClient({
@@ -55,7 +55,7 @@ class NiconicoLiveCommentClient {
     required String websocketUrl,
     required String thread,
     String? threadkey,
-    required Function(ChatMessage) onChatMessage,
+    required Function(ChatMessage chatMessage) onChatMessage,
   }) async {
     logger.info('connect to $websocketUrl');
 

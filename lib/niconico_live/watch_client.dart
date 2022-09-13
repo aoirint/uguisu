@@ -10,9 +10,39 @@ class KeepSeatIsolateOptions {
   KeepSeatIsolateOptions({required this.sendPort, required this.keepSeatInterval});
 }
 
+class RoomMessageMessageServer {
+  String type;
+  String uri;
+
+  RoomMessageMessageServer({
+    required this.type,
+    required this.uri,
+  });
+}
+
+class RoomMessage {
+  bool isFirst;
+  RoomMessageMessageServer messageServer;
+  String name;
+  String threadId;
+  String vposBaseTime;
+  String waybackkey;
+  String yourPostKey;
+
+  RoomMessage({
+    required this.isFirst,
+    required this.messageServer,
+    required this.name,
+    required this.threadId,
+    required this.vposBaseTime,
+    required this.waybackkey,
+    required this.yourPostKey,
+  });
+}
+
 class NiconicoLiveWatchClient {
   WebSocket? client;
-  final Function(String threadId, String yourPostkey) onRoomMessage;
+  Function(RoomMessage roomMessage)? onRoomMessage;
   ReceivePort? keepSeatTimingReceivePort;
   SendPort? keepSeatTimingSendPort;
   Isolate? keepSeatTimingIsolate;
@@ -20,13 +50,15 @@ class NiconicoLiveWatchClient {
   late Logger logger;
 
   NiconicoLiveWatchClient({
-    required this.onRoomMessage,
     this.keepSeatInterval = const Duration(seconds: 60),
   }) {
     logger = Logger('NiconicoLiveWatchClient');
   }
 
-  Future<void> connect(String websocketUrl) async {
+  Future<void> connect({
+    required String websocketUrl,
+    required Function(RoomMessage roomMessage) onRoomMessage,
+  }) async {
     logger.info('connect to $websocketUrl');
 
     WebSocket client = await WebSocket.connect(websocketUrl);
@@ -100,6 +132,8 @@ class NiconicoLiveWatchClient {
       sendPort: keepSeatTimingReceivePort.sendPort,
       keepSeatInterval: keepSeatInterval,
     ));
+
+    this.onRoomMessage = onRoomMessage;
   }
 
   Future<void> stop() async {
@@ -130,11 +164,20 @@ class NiconicoLiveWatchClient {
       }));
     } else if (type == 'room') {
       final data = message['data'];
-      
-      String threadId = data['threadId'];
-      String yourPostkey = data['yourPostkey'];
+      final Map<String, dynamic> messageServer = data['messageServer'];
 
-      onRoomMessage(threadId, yourPostkey);
+      onRoomMessage?.call(RoomMessage(
+        isFirst: data['isFirst'],
+        messageServer: RoomMessageMessageServer(
+          type: messageServer['type'],
+          uri: messageServer['uri'],
+        ),
+        name: data['name'],
+        threadId: data['threadId'],
+        vposBaseTime: data['vposBaseTime'],
+        waybackkey: data['waybackkey'],
+        yourPostKey: data['yourPostKey'],
+      ));
     }
   }
 }

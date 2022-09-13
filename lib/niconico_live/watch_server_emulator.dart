@@ -51,14 +51,14 @@ class NiconicoLiveWatchServerEmulator {
             'data': {
               'isFirst': true,
               'messageServer': {
-                'type': '',
-                'uri': '',
+                'type': 'niwavided',
+                'uri': 'ws://127.0.0.1:10082/',
               },
-              'name': '',
-              'threadId': '',
-              'vposBaseTime': '',
-              'waybackkey': '',
-              'yourPostkey': '',
+              'name': 'アリーナ',
+              'threadId': 'dummy_thread',
+              'vposBaseTime': '2022-09-13T12:00:00+09:00',
+              'waybackkey': 'waybackkey',
+              'yourPostKey': 'dummy_thread_key',
             },
           }));
         } else if (type == 'pong') {
