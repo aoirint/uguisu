@@ -28,7 +28,7 @@ class RoomMessage {
   String threadId;
   String vposBaseTime;
   String waybackkey;
-  String yourPostKey;
+  String? yourPostKey;
 
   RoomMessage({
     required this.isFirst,
@@ -37,7 +37,7 @@ class RoomMessage {
     required this.threadId,
     required this.vposBaseTime,
     required this.waybackkey,
-    required this.yourPostKey,
+    this.yourPostKey,
   });
 }
 
@@ -218,7 +218,7 @@ class NiconicoLiveWatchClient {
         },
       });
     } else if (type == 'room') {
-      final data = message['data'];
+      final Map<String, dynamic> data = message['data'];
       final Map<String, dynamic> messageServer = data['messageServer'];
 
       onRoomMessage?.call(RoomMessage(
@@ -231,7 +231,7 @@ class NiconicoLiveWatchClient {
         threadId: data['threadId'],
         vposBaseTime: data['vposBaseTime'],
         waybackkey: data['waybackkey'],
-        yourPostKey: data['yourPostKey'],
+        yourPostKey: data.containsKey('yourPostKey') ? data['yourPostKey'] : null, // if not logined, undefined.
       ));
     } else if (type == 'schedule') {
       final data = message['data'];

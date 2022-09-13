@@ -40,10 +40,10 @@ Future<void> main() async {
     await simpleServer.start();
     try {
       var running = true;
-      var finishedAt = DateTime.now().add(const Duration(seconds: 5));
+      var finishedAt = DateTime.now().add(const Duration(seconds: 120));
 
       await simpleClient.connect(
-        livePageUrl: 'http://127.0.0.1:10080',
+        livePageUrl: 'https://live.nicovideo.jp/watch/lv338472221',
         onScheduleMessage: (scheduleMessage) {
           logger.info('Schedule: begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
         },
@@ -51,12 +51,21 @@ Future<void> main() async {
           logger.info('Statistics: viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
         },
         onChatMessage: (chatMessage) {
+          logger.info('Chat by user/${chatMessage.userId}: ${chatMessage.content}');
+
           if (chatMessage.premium == 2) { // 運営コメント
             if (chatMessage.content == '/disconnect') { // 番組終了
               running = false;
             }
           }
-          logger.info('Chat by user/${chatMessage.userId}: ${chatMessage.content}');
+          if (chatMessage.premium == 3) { // コマンド
+            final match = RegExp(r'^/emotion (.+)$').firstMatch(chatMessage.content);
+            if (match != null) {
+              final emotionName = match.group(1);
+
+              logger.info('Emotion $emotionName');
+            }
+          }
         },
       );
 
