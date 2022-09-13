@@ -82,7 +82,7 @@ Future<void> main(List<String> args) async {
             if (comment.startsWith('/info')) {
               // 3: 延長 | /info 3 30分延長しました
               // 8: ランキング | /info 8 第7位にランクインしました
-              // 10: 来場者 | /info 10 「DUMMY」が好きな1人が来場しました
+              // 10: 来場者 | /info 10 「DUMMY」が好きな1人が来場しました | /info 10 ニコニ広告枠から1人が来場しました
               // ?: 好きなものリスト追加
               final infoRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
               final infoArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(infoRawMessage)[0];
