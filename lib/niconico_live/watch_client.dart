@@ -58,11 +58,14 @@ class NiconicoLiveWatchClient {
 
   Future<void> connect({
     required String websocketUrl,
+    required String userAgent,
     required Function(RoomMessage roomMessage) onRoomMessage,
   }) async {
     logger.info('connect to $websocketUrl');
 
-    WebSocket client = await WebSocket.connect(websocketUrl);
+    WebSocket client = await WebSocket.connect(websocketUrl, headers: {
+      'User-Agent': userAgent,
+    });
     client.listen(
       (message) {
         __handle(message);
