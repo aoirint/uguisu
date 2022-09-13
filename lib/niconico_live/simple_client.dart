@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
+import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'live_page_client.dart';
 import 'watch_client.dart';
 import 'comment_client.dart';
@@ -13,6 +16,103 @@ class Room {
   });
 }
 
+class BaseChatMessage {
+  ChatMessage chatMessage;
+  BaseChatMessage({
+    required this.chatMessage,
+  });
+}
+
+class NormalChatMessage extends BaseChatMessage {
+  NormalChatMessage({
+    required chatMessage,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
+class EmotionChatMessage extends BaseChatMessage {
+  String emotionName;
+  EmotionChatMessage({
+    required chatMessage,
+    required this.emotionName,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
+class InfoChatMessage extends BaseChatMessage {
+  String infoId;
+  String infoMessage;
+  InfoChatMessage({
+    required chatMessage,
+    required this.infoId,
+    required this.infoMessage,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
+class SpiChatMessage extends BaseChatMessage {
+  String spiMessage;
+  SpiChatMessage({
+    required chatMessage,
+    required this.spiMessage,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
+class NicoadChatMessage extends BaseChatMessage {
+  int totalAdPoint;
+  String nicoadMessage;
+  NicoadChatMessage({
+    required chatMessage,
+    required this.totalAdPoint,
+    required this.nicoadMessage,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
+class GiftChatMessage extends BaseChatMessage {
+  String giftId;
+  String userId;
+  String userName;
+  String giftPoint;
+  String unknownArg1;
+  String giftName;
+  String unknownArg2;
+  GiftChatMessage({
+    required chatMessage,
+    required this.giftId,
+    required this.userId,
+    required this.userName,
+    required this.giftPoint,
+    required this.unknownArg1,
+    required this.giftName,
+    required this.unknownArg2,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
+class DisconnectChatMessage extends BaseChatMessage {
+  DisconnectChatMessage({
+    required chatMessage,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
+class UnknownChatMessage extends BaseChatMessage {
+  UnknownChatMessage({
+    required chatMessage,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+}
+
 class NiconicoLiveSimpleClient {
   final String userAgent;
 
@@ -23,7 +123,7 @@ class NiconicoLiveSimpleClient {
 
   Function(ScheduleMessage scheduleMessage)? onScheduleMessage;
   Function(StatisticsMessage statisticsMessage)? onStatisticsMessage;
-  Function(ChatMessage chatMessage)? onChatMessage;
+  Function(BaseChatMessage chatMessage)? onChatMessage;
 
   late Logger logger;
 
@@ -38,7 +138,7 @@ class NiconicoLiveSimpleClient {
     required String livePageUrl, // https://live.nicovideo.jp/watch/lv000000000
     required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
-    required Function(ChatMessage chatMessage) onChatMessage,
+    required Function(BaseChatMessage chatMessage) onChatMessage,
   }) async {
     this.livePageUrl = livePageUrl;
     this.onScheduleMessage = onScheduleMessage;
@@ -85,8 +185,92 @@ class NiconicoLiveSimpleClient {
     rooms.add(Room(roomMessage: roomMessage, commentClient: commentClient));
   }
 
+  BaseChatMessage __parseChatMessage(ChatMessage chatMessage) {
+    final comment = chatMessage.content;
+
+    if (chatMessage.premium == 2) { // 運営コメント
+      if (comment == '/disconnect') { // 番組終了
+        return DisconnectChatMessage(chatMessage: chatMessage);
+      }
+    }
+    if (chatMessage.premium == 3) { // コマンド
+      if (comment.startsWith('/emotion')) {
+        // エモーション
+        final emotionName = comment.substring(comment.indexOf(' ')+1).trim();
+        return EmotionChatMessage(chatMessage: chatMessage, emotionName: emotionName);
+      }
+
+      if (comment.startsWith('/info')) {
+        // 3: 延長 | /info 3 30分延長しました
+        // 8: ランキング | /info 8 第7位にランクインしました
+        // 10: 来場者 | /info 10 「DUMMY」が好きな1人が来場しました | /info 10 ニコニ広告枠から1人が来場しました
+        // ?: 好きなものリスト追加
+        final infoRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+        final infoArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(infoRawMessage)[0];
+        final infoId = infoArgs[0];
+        final infoMessage = infoArgs[1];
+
+        return InfoChatMessage(chatMessage: chatMessage, infoId: infoId, infoMessage: infoMessage);
+      }
+
+      if (comment.startsWith('/spi')) {
+        // 放送ネタ
+        final spiRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+        final spiArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(spiRawMessage)[0];
+        final spiMessage = spiArgs[0];
+
+        return SpiChatMessage(chatMessage: chatMessage, spiMessage: spiMessage);
+      }
+
+      if (comment.startsWith('/nicoad')) {
+        // ニコニ広告
+        final nicoAdRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+        final nicoAdMessage = jsonDecode(nicoAdRawMessage);
+
+        final nicoAdVersion = nicoAdMessage['version'];
+        if (nicoAdVersion != '1') {
+          logger.warning('Unsupported /nicoad version: $nicoAdVersion');
+        }
+
+        final totalAdPoint = nicoAdMessage['totalAdPoint'];
+        final nicoadMessage = nicoAdMessage['message'];
+
+        return NicoadChatMessage(chatMessage: chatMessage, totalAdPoint: totalAdPoint, nicoadMessage: nicoadMessage);
+      }
+
+      if (comment.startsWith('/gift')) {
+        // ギフト
+        // /gift ギフトID ユーザーID \"ユーザー名\" ギフトポイント \"\" \"ギフト名\" 匿名フラグ？
+        final giftRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+        final giftArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(giftRawMessage)[0];
+
+        final giftId = giftArgs[0];
+        final userId = giftArgs[1];
+        final userName = giftArgs[2];
+        final giftPoint = giftArgs[3];
+        final unknownArg1 = giftArgs[4];
+        final giftName = giftArgs[5];
+        final unknownArg2 = giftArgs[6];
+
+        return GiftChatMessage(
+          chatMessage: chatMessage,
+          giftId: giftId,
+          userId: userId,
+          userName: userName,
+          giftPoint: giftPoint,
+          unknownArg1: unknownArg1,
+          giftName: giftName,
+          unknownArg2: unknownArg2,
+        );
+      }
+    }
+
+    return UnknownChatMessage(chatMessage: chatMessage);
+  }
+
   void __onChatMessage(ChatMessage chatMessage) {
-    onChatMessage?.call(chatMessage);
+    final parsedChatMessage = __parseChatMessage(chatMessage);
+    onChatMessage?.call(parsedChatMessage);
   }
 
   void __onScheduleMessage(ScheduleMessage scheduleMessage) {
