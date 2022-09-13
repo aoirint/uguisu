@@ -119,6 +119,8 @@ class NiconicoLiveSimpleClient {
   String? livePageUrl;
   NiconicoLivePage? livePage;
   NiconicoLiveWatchClient? watchClient;
+  // TODO: user page and icon manager
+
   late List<Room> rooms;
 
   Function(ScheduleMessage scheduleMessage)? onScheduleMessage;
