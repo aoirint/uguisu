@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 
@@ -24,13 +27,19 @@ Future<void> __startCommentClient({
   }
 }
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) { 
     print('${record.loggerName}: ${record.level.name}: ${record.time}: ${record.message}');
   });
 
   final logger = Logger('main');
+
+  if (args.isEmpty) {
+    throw Exception('Usage: dart run lib/niconico_live.dart livePageUrl');
+  }
+  final livePageUrl = args[0];
+  logger.info('Live Page URL: $livePageUrl');
 
   const userAgent = 'uguisu/0.0.0';
 
@@ -43,7 +52,7 @@ Future<void> main() async {
       var finishedAt = DateTime.now().add(const Duration(seconds: 120));
 
       await simpleClient.connect(
-        livePageUrl: 'https://live.nicovideo.jp/watch/lv338472221',
+        livePageUrl: livePageUrl, // for test: http://127.0.0.1:10080, for real case: https://live.nicovideo.jp/watch/lv000000000
         onScheduleMessage: (scheduleMessage) {
           logger.info('Schedule: begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
         },
@@ -52,18 +61,68 @@ Future<void> main() async {
         },
         onChatMessage: (chatMessage) {
           logger.info('Chat by user/${chatMessage.userId}: ${chatMessage.content}');
+          final comment = chatMessage.content;
 
           if (chatMessage.premium == 2) { // 運営コメント
-            if (chatMessage.content == '/disconnect') { // 番組終了
+            if (comment == '/disconnect') { // 番組終了
               running = false;
             }
           }
           if (chatMessage.premium == 3) { // コマンド
-            final match = RegExp(r'^/emotion (.+)$').firstMatch(chatMessage.content);
-            if (match != null) {
-              final emotionName = match.group(1);
-
+            if (comment.startsWith('/emotion')) {
+              // エモーション
+              final emotionName = comment.substring(comment.indexOf(' ')+1).trim();
               logger.info('Emotion $emotionName');
+            }
+
+            if (comment.startsWith('/info')) {
+              // 3: 延長
+              // 10: 来場者
+              final infoId = comment.substring(comment.indexOf(' ')+1).trim();
+              final infoMessage = comment.substring(comment.indexOf(' ', comment.indexOf(' ')+1)).trim();
+              logger.info('Info $infoId $infoMessage');
+            }
+
+            if (comment.startsWith('/spi')) {
+              // 放送ネタ
+              var spiRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+              final spiArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(spiRawMessage)[0];
+              final spiMessage = spiArgs[0];
+
+              logger.info('Spi $spiMessage');
+            }
+
+            if (comment.startsWith('/nicoad')) {
+              // ニコニ広告
+              final nicoAdRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+              final nicoAdMessage = jsonDecode(nicoAdRawMessage);
+
+              final nicoAdVersion = nicoAdMessage['version'];
+              if (nicoAdVersion != '1') {
+                logger.warning('Unsupported /nicoad version: $nicoAdVersion');
+              }
+
+              final totalAdPoint = nicoAdMessage['totalAdPoint'];
+              final message = nicoAdMessage['message'];
+
+              logger.info('Nicoad $totalAdPoint $message');
+            }
+
+            if (comment.startsWith('/gift')) {
+              // ギフト
+              // /gift ギフトID ユーザーID \"ユーザー名\" ギフトポイント \"\" \"ギフト名\" 匿名フラグ？
+              final giftRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
+              final giftArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(giftRawMessage)[0];
+
+              final giftId = giftArgs[0];
+              final userId = giftArgs[1];
+              final userName = giftArgs[2];
+              final giftPoint = giftArgs[3];
+              final empty = giftArgs[4];
+              final giftName = giftArgs[5];
+              final anonimity = giftArgs[6];
+
+              logger.info('Gift giftId=$giftId userId=$userId userName=$userName giftPoint=$giftPoint empty=$empty giftName=$giftName anonimity=$anonimity');
             }
           }
         },
