@@ -365,6 +365,9 @@ class NiconicoLiveCommentClient {
   }
 
   Future<void> stop() async {
+    // stop empty pings
+    pingTimingSendPort?.send('close');
+
     logger.info('close websocket client');
     await client?.close();
     logger.info('closed');
