@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:isolate';
 import 'package:logging/logging.dart';
 
 class NiconicoLiveComment {
@@ -119,6 +120,9 @@ class NiconicoLiveCommentServerEmulator {
     ws.listen(
       (rawMessage) {
         logger.info('server message $rawMessage');
+
+        // skip empty ping packet
+        if (rawMessage == '') return;
 
         final List<dynamic> messages = jsonDecode(rawMessage);
         for (final message in messages) {
@@ -268,6 +272,8 @@ class NiconicoLiveWatchClient {
 
 class NiconicoLiveCommentClient {
   WebSocket? client;
+  ReceivePort? pingTimingReceivePort;
+  SendPort? pingTimingSendPort;
   late Logger logger;
 
   NiconicoLiveCommentClient() {
@@ -318,6 +324,44 @@ class NiconicoLiveCommentClient {
     ]));
 
     this.client = client;
+
+    final pingTimingReceivePort = ReceivePort();
+    pingTimingReceivePort.forEach((message) {
+      if (message is SendPort) {
+        pingTimingSendPort = message; // save the send port to another isolate to notify close event
+      }
+      if (message == 'ping') {
+        client.add(''); // send a ping as an empty packet
+      }
+    });
+
+    this.pingTimingReceivePort = pingTimingReceivePort;
+
+    Isolate.spawn((sendPort) async {
+      var running = true;
+
+      final receivePort = ReceivePort();
+      receivePort.forEach((message) {
+        if (message == 'close') {
+          running = false;
+        }
+      });
+
+      sendPort.send(receivePort.sendPort);
+
+      var lastPingTime = DateTime.now();
+
+      while (running) {
+        var currentTime = DateTime.now();
+
+        // 60 seconds interval
+        if (lastPingTime.add(const Duration(seconds: 1)).isBefore(currentTime)) {
+          sendPort.send('ping');
+          lastPingTime = currentTime;
+        }
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+    }, pingTimingReceivePort.sendPort);
   }
 
   Future<void> stop() async {
