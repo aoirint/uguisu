@@ -53,6 +53,7 @@ Future<void> main(List<String> args) async {
 
       // Akashic
       // ?: 放送者フォロー
+      // ?: ニコるの勢い順並び替え
 
       await simpleClient.connect(
         livePageUrl: livePageUrl, // for test: http://127.0.0.1:10080, for real case: https://live.nicovideo.jp/watch/lv000000000
