@@ -11,7 +11,7 @@ class NiconicoLiveCommentServerEmulator {
   }
 
   Future<void> start(String host, int port) async {
-    final server = await HttpServer.bind(host ,port);
+    final server = await HttpServer.bind(host, port);
 
     server
       .where((request) => request.uri.path == '/')

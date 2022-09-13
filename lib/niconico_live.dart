@@ -2,13 +2,14 @@ import 'package:logging/logging.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 
 Future<void> __startCommentClient({
+  required String commentServerWebSocketUrl,
   required String thread,
   String? threadkey,
 }) async {
   final commentClient = NiconicoLiveCommentClient();
   try {
     await commentClient.connect(
-      websocketUrl: "ws://127.0.0.1:10081/",
+      websocketUrl: commentServerWebSocketUrl,
       thread: thread,
       threadkey: threadkey,
     );
@@ -27,41 +28,56 @@ Future<void> main() async {
 
   final logger = Logger('main');
 
-  final watchServer = NiconicoLiveWatchServerEmulator();
+
+  final livePageServer = NiconicoLivePageServerEmulator();
   try {
-    await watchServer.start("127.0.0.1", 10080);
+    await livePageServer.start('127.0.0.1', 10080);
 
-    final commentServer = NiconicoLiveCommentServerEmulator();
+    final livePageClient = NiconicoLivePageClient();
+    final livePage = await livePageClient.get(uri: Uri.parse('http://127.0.0.1:10080/'));
+    
+    final watchServerWebSocketUrl = livePage.webSocketUrl;
+
+    final watchServer = NiconicoLiveWatchServerEmulator();
     try {
-      await commentServer.start("127.0.0.1", 10081);
+      await watchServer.start('127.0.0.1', 10081);
 
-      final commentClients = <Future>[];
-
-      final watchClient = NiconicoLiveWatchClient(
-        onRoomMessage: (threadId, yourPostkey) {
-          commentClients.add(
-            __startCommentClient(
-              thread: threadId,
-              threadkey: yourPostkey,
-            )
-          );
-        },
-      );
+      final commentServer = NiconicoLiveCommentServerEmulator();
       try {
-        await watchClient.connect("ws://127.0.0.1:10080/");
+        await commentServer.start('127.0.0.1', 10082);
 
-        await Future.delayed(const Duration(seconds: 5));
+        final commentClients = <Future>[];
 
-        await Future.wait(commentClients);
+        final watchClient = NiconicoLiveWatchClient(
+          onRoomMessage: (threadId, yourPostkey) {
+            commentClients.add(
+              __startCommentClient(
+                commentServerWebSocketUrl: 'ws://127.0.0.1:10082/',
+                thread: threadId,
+                threadkey: yourPostkey,
+              )
+            );
+          },
+        );
+        try {
+          await watchClient.connect(watchServerWebSocketUrl);
+
+          await Future.delayed(const Duration(seconds: 5));
+
+          await Future.wait(commentClients);
+        } finally {
+          await watchClient.stop();
+        }
       } finally {
-        await watchClient.stop();
+        await commentServer.stop();
       }
     } finally {
-      await commentServer.stop();
+      await watchServer.stop();
     }
   } finally {
-    await watchServer.stop();
+    await livePageServer.stop();
   }
+
 
   logger.info('exit');
 }
