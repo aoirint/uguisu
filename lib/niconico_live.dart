@@ -201,6 +201,9 @@ class NiconicoLiveCommentServerEmulator {
 class NiconicoLiveWatchClient {
   WebSocket? client;
   final Function(String threadId, String yourPostkey) onRoomMessage;
+  ReceivePort? keepSeatTimingReceivePort;
+  SendPort? keepSeatTimingSendPort;
+  Isolate? keepSeatTimingIsolate;
   late Logger logger;
 
   NiconicoLiveWatchClient({required this.onRoomMessage}) {
@@ -236,9 +239,54 @@ class NiconicoLiveWatchClient {
     }));
 
     this.client = client;
+
+    final keepSeatTimingReceivePort = ReceivePort();
+    keepSeatTimingReceivePort.listen((message) {
+      if (message is SendPort) {
+        keepSeatTimingSendPort = message; // save the send port to another isolate to notify close event
+      }
+      if (message == 'keepSeat') {
+        client.add(jsonEncode({ 'type': 'keepSeat' })); // send a ping as an empty packet
+      }
+    });
+
+    this.keepSeatTimingReceivePort = keepSeatTimingReceivePort;
+
+    keepSeatTimingIsolate = await Isolate.spawn((sendPort) async {
+      var running = true;
+
+      final receivePort = ReceivePort();
+      receivePort.listen((message) {
+        if (message == 'close') {
+          running = false;
+        }
+      });
+
+      sendPort.send(receivePort.sendPort);
+
+      var lastKeepSeatTime = DateTime.now();
+
+      while (running) {
+        var currentTime = DateTime.now();
+
+        // 60 seconds interval
+        if (lastKeepSeatTime.add(const Duration(seconds: 1)).isBefore(currentTime)) {
+          sendPort.send('keepSeat');
+          lastKeepSeatTime = currentTime;
+        }
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
+      receivePort.close();
+    }, keepSeatTimingReceivePort.sendPort);
   }
 
   Future<void> stop() async {
+    // stop empty pings
+    keepSeatTimingSendPort?.send('close');
+    // keepSeatTimingIsolate?.kill(priority: Isolate.immediate);
+    keepSeatTimingReceivePort?.close();
+
     logger.info('close websocket client');
     await client?.close();
     logger.info('closed');
@@ -274,6 +322,7 @@ class NiconicoLiveCommentClient {
   WebSocket? client;
   ReceivePort? pingTimingReceivePort;
   SendPort? pingTimingSendPort;
+  Isolate? pingTimingIsolate;
   late Logger logger;
 
   NiconicoLiveCommentClient() {
@@ -326,7 +375,7 @@ class NiconicoLiveCommentClient {
     this.client = client;
 
     final pingTimingReceivePort = ReceivePort();
-    pingTimingReceivePort.forEach((message) {
+    pingTimingReceivePort.listen((message) {
       if (message is SendPort) {
         pingTimingSendPort = message; // save the send port to another isolate to notify close event
       }
@@ -337,11 +386,11 @@ class NiconicoLiveCommentClient {
 
     this.pingTimingReceivePort = pingTimingReceivePort;
 
-    Isolate.spawn((sendPort) async {
+    pingTimingIsolate = await Isolate.spawn((sendPort) async {
       var running = true;
 
       final receivePort = ReceivePort();
-      receivePort.forEach((message) {
+      receivePort.listen((message) {
         if (message == 'close') {
           running = false;
         }
@@ -359,14 +408,18 @@ class NiconicoLiveCommentClient {
           sendPort.send('ping');
           lastPingTime = currentTime;
         }
-        await Future.delayed(const Duration(milliseconds: 10));
+        await Future.delayed(const Duration(milliseconds: 100));
       }
+
+      receivePort.close();
     }, pingTimingReceivePort.sendPort);
   }
 
   Future<void> stop() async {
     // stop empty pings
     pingTimingSendPort?.send('close');
+    // pingTimingIsolate?.kill(priority: Isolate.immediate);
+    pingTimingReceivePort?.close();
 
     logger.info('close websocket client');
     await client?.close();
