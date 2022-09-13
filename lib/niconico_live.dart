@@ -5,6 +5,7 @@ Future<void> __startCommentClient({
   required String commentServerWebSocketUrl,
   required String thread,
   String? threadkey,
+  required Function(ChatMessage) onChatMessage,
 }) async {
   final commentClient = NiconicoLiveCommentClient();
   try {
@@ -12,6 +13,7 @@ Future<void> __startCommentClient({
       websocketUrl: commentServerWebSocketUrl,
       thread: thread,
       threadkey: threadkey,
+      onChatMessage: onChatMessage,
     );
 
     await Future.delayed(const Duration(seconds: 3));
@@ -55,6 +57,9 @@ Future<void> main() async {
                 commentServerWebSocketUrl: 'ws://127.0.0.1:10082/',
                 thread: threadId,
                 threadkey: yourPostkey,
+                onChatMessage: (chat) {
+                  logger.info('Chat by user/${chat.userId}: ${chat.content}');
+                },
               )
             );
           },

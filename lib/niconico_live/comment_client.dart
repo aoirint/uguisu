@@ -10,12 +10,39 @@ class PingIsolateOptions {
   PingIsolateOptions({required this.sendPort, required this.pingInterval});
 }
 
+class ChatMessage {
+  int? anonimity;
+  String content;
+  int date;
+  int dateUsec;
+  int no;
+  int? premium;
+  String thread;
+  String? mail;
+  String userId;
+  int vpos;
+
+  ChatMessage({
+    this.anonimity,
+    required this.content,
+    required this.date,
+    required this.dateUsec,
+    required this.no,
+    this.premium,
+    required this.thread,
+    this.mail,
+    required this.userId,
+    required this.vpos,
+  });
+}
+
 class NiconicoLiveCommentClient {
   WebSocket? client;
   ReceivePort? pingTimingReceivePort;
   SendPort? pingTimingSendPort;
   Isolate? pingTimingIsolate;
   Duration pingInterval;
+  Function(ChatMessage)? onChatMessage;
   late Logger logger;
 
   NiconicoLiveCommentClient({
@@ -28,6 +55,7 @@ class NiconicoLiveCommentClient {
     required String websocketUrl,
     required String thread,
     String? threadkey,
+    required Function(ChatMessage) onChatMessage,
   }) async {
     logger.info('connect to $websocketUrl');
 
@@ -112,6 +140,8 @@ class NiconicoLiveCommentClient {
       sendPort: pingTimingReceivePort.sendPort,
       pingInterval: pingInterval,
     ));
+
+    this.onChatMessage = onChatMessage;
   }
 
   Future<void> stop() async {
@@ -126,6 +156,32 @@ class NiconicoLiveCommentClient {
   }
 
   void __handle(dynamic rawMessage) {
+    WebSocket ws = client!;
+
     logger.info('message: $rawMessage');
+
+    final Map<String, dynamic> message = jsonDecode(rawMessage);
+    
+    if (message.containsKey('ping')) {
+    }
+
+    if (message.containsKey('thread')) {
+    }
+
+    if (message.containsKey('chat')) {
+      Map<String, dynamic> chat = message['chat'];
+
+      onChatMessage?.call(ChatMessage(
+        anonimity: chat['anonimity'],
+        content: chat['content'],
+        date: chat['date'],
+        dateUsec: chat['date_usec'],
+        no: chat['no'],
+        premium: chat['premium'],
+        thread: chat['thread'],
+        userId: chat['user_id'],
+        vpos: chat['vpos'],
+      ));
+    }
   }
 }
