@@ -73,12 +73,9 @@ class NiconicoLiveWatchClient {
   ReceivePort? keepSeatTimingReceivePort;
   SendPort? keepSeatTimingSendPort;
   Isolate? keepSeatTimingIsolate;
-  Duration keepSeatInterval;
   late Logger logger;
 
-  NiconicoLiveWatchClient({
-    this.keepSeatInterval = const Duration(seconds: 60),
-  }) {
+  NiconicoLiveWatchClient() {
     logger = Logger('NiconicoLiveWatchClient');
   }
 

@@ -34,70 +34,31 @@ Future<void> main() async {
 
   const userAgent = 'uguisu/0.0.0';
 
-  final livePageServer = NiconicoLivePageServerEmulator();
+  final simpleServer = NiconicoLiveSimpleServerEmulator();
+  final simpleClient = NiconicoLiveSimpleClient(userAgent: userAgent);
   try {
-    await livePageServer.start('127.0.0.1', 10080);
-
-    final livePageClient = NiconicoLivePageClient();
-    final livePage = await livePageClient.get(
-      uri: Uri.parse('http://127.0.0.1:10080/'),
-      userAgent: userAgent,
-    );
-
-    final watchServerWebSocketUrl = livePage.webSocketUrl;
-
-    final watchServer = NiconicoLiveWatchServerEmulator();
+    await simpleServer.start();
     try {
-      await watchServer.start('127.0.0.1', 10081);
+      await simpleClient.connect(
+        livePageUrl: 'http://127.0.0.1:10080',
+        onScheduleMessage: (scheduleMessage) {
+          logger.info('Schedule: begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
+        },
+        onStatisticsMessage: (statisticsMessage) {
+          logger.info('Statistics: viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
+        },
+        onChatMessage: (chatMessage) {
+          logger.info('Chat by user/${chatMessage.userId}: ${chatMessage.content}');
+        },
+      );
 
-      final commentServer = NiconicoLiveCommentServerEmulator();
-      try {
-        await commentServer.start('127.0.0.1', 10082);
-
-        final commentClients = <Future>[];
-
-        final watchClient = NiconicoLiveWatchClient();
-        try {
-          await watchClient.connect(
-            websocketUrl: watchServerWebSocketUrl,
-            userAgent: userAgent,
-            onRoomMessage: (roomMessage) {
-              commentClients.add(
-                __startCommentClient(
-                  commentServerWebSocketUrl: roomMessage.messageServer.uri,
-                  userAgent: userAgent,
-                  thread: roomMessage.threadId,
-                  threadkey: roomMessage.yourPostKey,
-                  onChatMessage: (chat) {
-                    logger.info('Chat by user/${chat.userId}: ${chat.content}');
-                  },
-                )
-              );
-            },
-            onScheduleMessage: (scheduleMessage) {
-              logger.info('Schedule: begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
-            },
-            onStatisticsMessage: (statisticsMessage) {
-              logger.info('Statistics: viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
-            },
-          );
-
-          await Future.delayed(const Duration(seconds: 5));
-
-          await Future.wait(commentClients);
-        } finally {
-          await watchClient.stop();
-        }
-      } finally {
-        await commentServer.stop();
-      }
+      await Future.delayed(const Duration(seconds: 5));
     } finally {
-      await watchServer.stop();
+      await simpleClient.stop();
     }
   } finally {
-    await livePageServer.stop();
+    await simpleServer.stop();
   }
-
 
   logger.info('exit');
 }

@@ -5,3 +5,5 @@ export 'watch_server_emulator.dart';
 export 'live_page_client.dart';
 export 'live_page_server_emulator.dart';
 export 'models.dart';
+export 'simple_client.dart';
+export 'simple_server_emulator.dart';
