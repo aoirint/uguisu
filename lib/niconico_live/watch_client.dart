@@ -5,9 +5,10 @@ import 'package:logging/logging.dart';
 
 class KeepSeatIsolateOptions {
   SendPort sendPort;
-  Duration keepSeatInterval;
 
-  KeepSeatIsolateOptions({required this.sendPort, required this.keepSeatInterval});
+  KeepSeatIsolateOptions({
+    required this.sendPort,
+  });
 }
 
 class RoomMessageMessageServer {
@@ -93,6 +94,11 @@ class NiconicoLiveWatchClient {
       if (message is SendPort) {
         keepSeatTimingSendPort = message; // save the send port to another isolate to notify close event
       }
+      if (message is Map) {
+        if (message['type'] == 'log') {
+          logger.info(message['data']['content']);
+        }
+      }
       if (message == 'keepSeat') {
         client.add(jsonEncode({ 'type': 'keepSeat' })); // send a ping as an empty packet
       }
@@ -101,12 +107,25 @@ class NiconicoLiveWatchClient {
     this.keepSeatTimingReceivePort = keepSeatTimingReceivePort;
 
     keepSeatTimingIsolate = await Isolate.spawn((options) async {
+      final logger = Logger('NiconicoLiveWatchClient[keepSeatTimingIsolate]');
       final sendPort = options.sendPort;
-      
+
       var running = true;
+      int keepIntervalSec = 30;
 
       final receivePort = ReceivePort();
       receivePort.listen((message) {
+        if (message is Map) {
+          if (message['type'] == 'set_keep_interval') {
+            keepIntervalSec = message['data']['keepIntervalSec'];
+            sendPort.send({
+              'type': 'log',
+              'data': {
+                'content': 'set_keep_interval: $keepIntervalSec',
+              },
+            });
+          }
+        }
         if (message == 'close') {
           running = false;
         }
@@ -120,7 +139,7 @@ class NiconicoLiveWatchClient {
         var currentTime = DateTime.now();
 
         // 60 seconds interval
-        if (lastKeepSeatTime.add(options.keepSeatInterval).isBefore(currentTime)) {
+        if (lastKeepSeatTime.add(Duration(seconds: keepIntervalSec)).isBefore(currentTime)) {
           sendPort.send('keepSeat');
           lastKeepSeatTime = currentTime;
         }
@@ -130,7 +149,6 @@ class NiconicoLiveWatchClient {
       receivePort.close();
     }, KeepSeatIsolateOptions(
       sendPort: keepSeatTimingReceivePort.sendPort,
-      keepSeatInterval: keepSeatInterval,
     ));
 
     this.onRoomMessage = onRoomMessage;
@@ -159,9 +177,16 @@ class NiconicoLiveWatchClient {
       ws.add(jsonEncode({
         'type': 'pong',
       }));
-      ws.add(jsonEncode({
-        'type': 'keepSeat',
-      }));
+    } else if (type == 'seat') {
+      final data = message['data'];
+      int keepIntervalSec = data['keepIntervalSec'];
+
+      keepSeatTimingSendPort?.send({
+        'type': 'set_keep_interval',
+        'data': {
+          'keepIntervalSec': keepIntervalSec,
+        },
+      });
     } else if (type == 'room') {
       final data = message['data'];
       final Map<String, dynamic> messageServer = data['messageServer'];

@@ -47,6 +47,12 @@ class NiconicoLiveWatchServerEmulator {
 
         if (type == 'startWatching') {
           ws.add(jsonEncode({
+            'type': 'seat',
+            'data': {
+              'keepIntervalSec': 30,
+            },
+          }));
+          ws.add(jsonEncode({
             'type': 'room',
             'data': {
               'isFirst': true,
