@@ -58,80 +58,28 @@ Future<void> main(List<String> args) async {
       await simpleClient.connect(
         livePageUrl: livePageUrl, // for test: http://127.0.0.1:10080, for real case: https://live.nicovideo.jp/watch/lv000000000
         onScheduleMessage: (scheduleMessage) {
-          logger.info('Schedule: begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
+          logger.info('Schedule | begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
         },
         onStatisticsMessage: (statisticsMessage) {
-          logger.info('Statistics: viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
+          logger.info('Statistics | viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
         },
         onChatMessage: (chatMessage) {
-          logger.info('Chat by user/${chatMessage.userId}: ${chatMessage.content}');
-          final comment = chatMessage.content;
-
-          if (chatMessage.premium == 2) { // 運営コメント
-            if (comment == '/disconnect') { // 番組終了
-              running = false;
-            }
-          }
-          if (chatMessage.premium == 3) { // コマンド
-            if (comment.startsWith('/emotion')) {
-              // エモーション
-              final emotionName = comment.substring(comment.indexOf(' ')+1).trim();
-              logger.info('Emotion $emotionName');
-            }
-
-            if (comment.startsWith('/info')) {
-              // 3: 延長 | /info 3 30分延長しました
-              // 8: ランキング | /info 8 第7位にランクインしました
-              // 10: 来場者 | /info 10 「DUMMY」が好きな1人が来場しました | /info 10 ニコニ広告枠から1人が来場しました
-              // ?: 好きなものリスト追加
-              final infoRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
-              final infoArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(infoRawMessage)[0];
-              final infoId = infoArgs[0];
-              final infoMessage = infoArgs[1];
-              logger.info('Info $infoId $infoMessage');
-            }
-
-            if (comment.startsWith('/spi')) {
-              // 放送ネタ
-              final spiRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
-              final spiArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(spiRawMessage)[0];
-              final spiMessage = spiArgs[0];
-
-              logger.info('Spi $spiMessage');
-            }
-
-            if (comment.startsWith('/nicoad')) {
-              // ニコニ広告
-              final nicoAdRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
-              final nicoAdMessage = jsonDecode(nicoAdRawMessage);
-
-              final nicoAdVersion = nicoAdMessage['version'];
-              if (nicoAdVersion != '1') {
-                logger.warning('Unsupported /nicoad version: $nicoAdVersion');
-              }
-
-              final totalAdPoint = nicoAdMessage['totalAdPoint'];
-              final message = nicoAdMessage['message'];
-
-              logger.info('Nicoad version=$nicoAdVersion totalAdPoint=$totalAdPoint message=$message');
-            }
-
-            if (comment.startsWith('/gift')) {
-              // ギフト
-              // /gift ギフトID ユーザーID \"ユーザー名\" ギフトポイント \"\" \"ギフト名\" 匿名フラグ？
-              final giftRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
-              final giftArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(giftRawMessage)[0];
-
-              final giftId = giftArgs[0];
-              final userId = giftArgs[1];
-              final userName = giftArgs[2];
-              final giftPoint = giftArgs[3];
-              final empty = giftArgs[4];
-              final giftName = giftArgs[5];
-              final anonimity = giftArgs[6];
-
-              logger.info('Gift giftId=$giftId userId=$userId userName=$userName giftPoint=$giftPoint empty=$empty giftName=$giftName anonimity=$anonimity');
-            }
+          if (chatMessage is DisconnectChatMessage) {
+            running = false;
+          } else if (chatMessage is EmotionChatMessage) {
+            logger.info('Emotion | ${chatMessage.emotionName}');
+          } else if (chatMessage is InfoChatMessage) {
+            logger.info('Info | infoId=${chatMessage.infoId} infoMessage=${chatMessage.infoMessage}');
+          } else if (chatMessage is SpiChatMessage) {
+            logger.info('Spi | spiMessage=${chatMessage.spiMessage}');
+          } else if (chatMessage is NicoadChatMessage) {
+            logger.info('Nicoad | totalAdPoint=${chatMessage.totalAdPoint} message=${chatMessage.nicoadMessage}');
+          } else if (chatMessage is GiftChatMessage) {
+            logger.info('Gift | giftId=${chatMessage.giftId} userId=${chatMessage.userId} userName=${chatMessage.userName} giftPoint=${chatMessage.giftPoint} unknownArg1=${chatMessage.unknownArg1} giftName=${chatMessage.giftName} unknownArg2=${chatMessage.unknownArg2}');
+          } else if (chatMessage is NormalChatMessage) {
+            logger.info('Comment | userId=${chatMessage.chatMessage.userId} premium=${chatMessage.chatMessage.premium} content=${chatMessage.chatMessage.content}');
+          } else {
+            logger.info('Unknown | premium=${chatMessage.chatMessage.premium} content=${chatMessage.chatMessage.content}');
           }
         },
       );
