@@ -1,6 +1,3 @@
-import 'dart:typed_data';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
@@ -37,7 +34,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.lime,
       ),
-      home: const NiconicoLivePageWidget(title: 'Uguisu Home', livePageUrl: 'http://127.0.0.1:10080/'),
+      home: const NiconicoLivePageWidget(title: 'Uguisu Home'),
     );
   }
 }
@@ -46,11 +43,9 @@ class NiconicoLivePageWidget extends StatefulWidget {
   const NiconicoLivePageWidget({
     super.key,
     required this.title,
-    required this.livePageUrl,
   });
 
   final String title;
-  final String livePageUrl;
 
   @override
   State<NiconicoLivePageWidget> createState() => _NiconicoLivePageWidgetState();
@@ -60,23 +55,50 @@ class CommentRow {
 }
 
 class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
+  String? livePageUrl;
   NiconicoLivePage? livePage;
   ScheduleMessage? scheduleMessage;
   StatisticsMessage? statisticsMessage;
   List<BaseChatMessage> chatMessages = [];
 
   NiconicoLiveSimpleClient? simpleClient;
+  final liveIdOrUrlTextController = TextEditingController(text: '');
   Logger? logger;
 
   @override
   void initState() {
     super.initState();
 
-    const userAgent = 'uguisu/0.0.0';
-    final livePageUrl = widget.livePageUrl;
-
     final logger = Logger('main');
     this.logger = logger;
+  }
+
+  String? __createLivePageUrl({
+    required String livePageIdOrUrl,
+  }) {
+    String? livePageUrl;
+
+    // Full URL
+    if (livePageIdOrUrl.startsWith('http')) {
+      livePageUrl = livePageIdOrUrl;
+    }
+
+    // Live ID (lv000000000)
+    final liveIdMatch = RegExp(r'^(lv\d+)$').firstMatch(livePageIdOrUrl);
+    if (liveIdMatch != null) {
+      final liveId = liveIdMatch.group(1); // lv000000000
+      livePageUrl = 'https://live.nicovideo.jp/watch/${liveId}';
+    }
+
+    return livePageUrl;
+  }
+
+  void setLivePageUrl({
+    required String livePageUrl,
+  }) {
+    this.livePageUrl = livePageUrl;
+
+    const userAgent = 'uguisu/0.0.0';
 
     final simpleClient = NiconicoLiveSimpleClient(userAgent: userAgent);
     this.simpleClient = simpleClient;
@@ -95,13 +117,13 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           setState(() {
             this.scheduleMessage = scheduleMessage;
           });
-          logger.info('Schedule | begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
+          logger?.info('Schedule | begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
         },
         onStatisticsMessage: (statisticsMessage) {
           setState(() {
             this.statisticsMessage = statisticsMessage;
           });
-          logger.info('Statistics | viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
+          logger?.info('Statistics | viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
         },
         onChatMessage: (chatMessage) {
           Future(() async {
@@ -120,7 +142,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         userIconLoadCacheOrNull: (userId) async {
           final userIconJsonFile = File('cache/user_icon/$userId.json');
           if (! await userIconJsonFile.exists()) {
-            logger.warning('Cache-miss for user/$userId. User icon json not exists');
+            logger?.warning('Cache-miss for user/$userId. User icon json not exists');
             return null;
           }
 
@@ -128,7 +150,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           final userIconJson = jsonDecode(userIconRawJson);
 
           if (userIconJson['version'] != '1') {
-            logger.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
+            logger?.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
             return null;
           }
 
@@ -145,7 +167,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
           final iconFile = File(iconPath);
           if (! await iconFile.exists()) {
-            logger.warning('Unexpected cache-miss for user/$userId. User icon image not exists');
+            logger?.warning('Unexpected cache-miss for user/$userId. User icon image not exists');
             return null;
           }
 
@@ -195,7 +217,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         userPageLoadCacheOrNull: (userId) async {
           final userPageJsonFile = File('cache/user_page/$userId.json');
           if (! await userPageJsonFile.exists()) {
-            logger.warning('Cache-miss for user/$userId. User page json not exists');
+            logger?.warning('Cache-miss for user/$userId. User page json not exists');
             return null;
           }
 
@@ -203,7 +225,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           final userPageJson = jsonDecode(userPageRawJson);
 
           if (userPageJson['version'] != '1') {
-            logger.warning('Unsupported user page json version. Ignore this: ${userPageJsonFile.path}');
+            logger?.warning('Unsupported user page json version. Ignore this: ${userPageJsonFile.path}');
             return null;
           }
 
@@ -266,6 +288,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
+
     return Scaffold(
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
@@ -274,6 +297,44 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       ),
       body: Column(
         children: <Widget>[
+          Column(
+            children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0), 
+                      child: TextField(
+                        controller: liveIdOrUrlTextController,
+                        enabled: true,
+                        maxLines: 1,
+                        decoration: const InputDecoration(
+                          hintText: 'lv000000000 or https://live.nicovideo.jp/watch/lv000000000',
+                          contentPadding: EdgeInsets.all(8.0),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0), 
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final livePageIdOrUrl = liveIdOrUrlTextController.text;
+                        final livePageUrl = __createLivePageUrl(livePageIdOrUrl: livePageIdOrUrl);
+                        if (livePageUrl == null) {
+                          return;
+                        }
+
+                        setLivePageUrl(livePageUrl: livePageUrl);
+                      },
+                      child: const Text('Connect'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           Flexible(
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
