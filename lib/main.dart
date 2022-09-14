@@ -365,6 +365,26 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                         final livePageIdOrUrl = liveIdOrUrlTextController.text;
                         final livePageUrl = __createLivePageUrl(livePageIdOrUrl: livePageIdOrUrl);
                         if (livePageUrl == null) {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) {
+                              return AlertDialog(
+                                title: const Text('エラー：入力された番組IDまたはURLの形式は非対応です'),
+                                content: const Text('形式が合っているか確認してください。'),
+                                actions: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: ElevatedButton(
+                                      child: const Text('OK'),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+
                           return;
                         }
 
