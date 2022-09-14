@@ -1,9 +1,11 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:uguisu/niconico_live/niconico_live.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 void main() {
   Logger.root.level = Level.ALL;
@@ -100,17 +102,25 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
     const userAgent = 'uguisu/0.0.0';
 
-    final simpleClient = NiconicoLiveSimpleClient(userAgent: userAgent);
-    this.simpleClient = simpleClient;
-
-    Future<Uri> getUserPageUri(int userId) async {
-      if (livePageUrl.startsWith('https://live.nicovideo.jp/watch/')) {
-        return Uri.parse('https://www.nicovideo.jp/user/$userId');
-      }
-      return Uri.parse('http://127.0.0.1:10083/user_page/$userId');
-    }
-
     Future(() async {
+      await this.simpleClient?.stop();
+      setState(() {
+        livePage = null;
+        scheduleMessage = null;
+        statisticsMessage = null;
+        chatMessages.clear();
+      });
+
+      final simpleClient = NiconicoLiveSimpleClient(userAgent: userAgent);
+      this.simpleClient = simpleClient;
+
+      Future<Uri> getUserPageUri(int userId) async {
+        if (livePageUrl.startsWith('https://live.nicovideo.jp/watch/')) {
+          return Uri.parse('https://www.nicovideo.jp/user/$userId');
+        }
+        return Uri.parse('http://127.0.0.1:10083/user_page/$userId');
+      }
+
       await simpleClient.connect(
         livePageUrl: livePageUrl,
         onScheduleMessage: (scheduleMessage) {
@@ -267,7 +277,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     });
 
     setState(() {
-      livePage = simpleClient.livePage;
+      livePage = simpleClient?.livePage;
     });
   }
 
@@ -361,8 +371,24 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   Widget name = Container();
                   if (chatMessage is NormalChatMessage) {
                     final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
+                    final userId = chatMessage.chatMessage.userId;
                     if (nickname != null) {
-                      name = SelectableText(nickname);
+                      name = SelectableText.rich(
+                        TextSpan(
+                          text: nickname,
+                          style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                          mouseCursor: SystemMouseCursors.click,
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () async {
+                              final url = 'https://www.nicovideo.jp/user/$userId';
+                              if (!await launchUrlString(url)) {
+                                throw Exception('Failed to open URL: $url');
+                              }
+                            },
+                        ),
+                      );
+                    } else {
+                      name = SelectableText(userId);
                     }
                   }
 
