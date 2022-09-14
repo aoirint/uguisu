@@ -59,6 +59,8 @@ class CommentRow {
 class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   String? livePageUrl;
   NiconicoLivePage? livePage;
+  NiconicoUserPageCache? livePageSupplierUserPageCache;
+  NiconicoUserIconCache? livePageSupplierUserIconCache;
   ScheduleMessage? scheduleMessage;
   StatisticsMessage? statisticsMessage;
   List<BaseChatMessage> chatMessages = [];
@@ -274,10 +276,16 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           await userPageJsonFile.writeAsString(userPageRawJson, encoding: utf8, flush: true);
         },
       );
-    });
+      
+      final liveUserId = int.parse(simpleClient.livePage!.program.supplier.programProviderId);
+      final livePageSupplierUserPageCache = await simpleClient.userPageCacheClient!.loadOrFetchUserPage(userId: liveUserId, userPageUri: await getUserPageUri(liveUserId));
+      final livePageSupplierUserIconCache = await simpleClient.userIconCacheClient!.loadOrFetchIcon(userId: liveUserId, iconUri: Uri.parse(livePageSupplierUserPageCache.userPage.iconUrl));
 
-    setState(() {
-      livePage = simpleClient?.livePage;
+      setState(() {
+        livePage = simpleClient.livePage;
+        this.livePageSupplierUserPageCache = livePageSupplierUserPageCache;
+        this.livePageSupplierUserIconCache = livePageSupplierUserIconCache;
+      });
     });
   }
 
@@ -341,78 +349,151 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               ),
             ],
           ),
-          Flexible(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              reverse: true,
-              child: Table(
-                border: TableBorder.all(),
-                columnWidths: const <int, TableColumnWidth>{
-                  0: IntrinsicColumnWidth(), // no
-                  1: FixedColumnWidth(32), // icon
-                  2: IntrinsicColumnWidth(), // name
-                  3: IntrinsicColumnWidth(), // time
-                  4: FlexColumnWidth(), // content
-                },
-                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                children: chatMessages.map((chatMessage) {
-                  Widget icon = Container();
-                  if (chatMessage is NormalChatMessage) {
-                    final iconBytes = chatMessage.commentUser?.userIconCache?.userIcon.iconBytes;
-                    if (iconBytes != null) {
-                      icon = Image.memory(iconBytes);
-                    }
-                  }
-
-                  Widget name = Container();
-                  if (chatMessage is NormalChatMessage) {
-                    final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
-                    final userId = chatMessage.chatMessage.userId;
-                    if (nickname != null) {
-                      name = SelectableText.rich(
-                        TextSpan(
-                          text: nickname,
-                          style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                          mouseCursor: SystemMouseCursors.click,
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              final url = 'https://www.nicovideo.jp/user/$userId';
-                              if (!await launchUrlString(url)) {
-                                throw Exception('Failed to open URL: $url');
-                              }
-                            },
-                        ),
-                      );
-                    } else {
-                      name = SelectableText(userId);
-                    }
-                  }
-
-                  final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true);
-                  final dateFormat = DateFormat('HH:mm:ss');
-                  final commentedAt = SelectableText(dateFormat.format(commentedAtDateTime));
-
-                  TextStyle? textStyle;
-                  if (chatMessage is! NormalChatMessage) {
-                    // 0x727272
-                    // 0xFF0033
-                    textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
-                  }
-                  final content = SelectableText(
-                    chatMessage.chatMessage.content,
-                    style: textStyle,
-                  );
-
-                  return TableRow(
+          livePage == null ? Container() : Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: SizedBox(
+                  width: 64.0,
+                  height: 64.0,
+                  child: FittedBox(child: livePageSupplierUserIconCache != null ? Image.memory(livePageSupplierUserIconCache!.userIcon.iconBytes) : const Icon(Icons.account_box)),
+                  // child: FittedBox(child: Icon(Icons.account_box)),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 4.0),
+                    child: Text(livePage!.program.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: <Widget>[
-                      Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
-                      icon,
-                      Padding(padding: const EdgeInsets.all(8.0), child: name),
-                      Padding(padding: const EdgeInsets.all(8.0), child: commentedAt),
-                      Padding(padding: const EdgeInsets.all(8.0), child: content),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
+                        child: Text.rich(
+                          TextSpan(
+                            text: livePage!.program.supplier.name,
+                            style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                            mouseCursor: SystemMouseCursors.click,
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                final url = 'https://www.nicovideo.jp/user/${livePage!.program.supplier.programProviderId}';
+                                if (!await launchUrlString(url)) {
+                                  throw Exception('Failed to open URL: $url');
+                                }
+                              },
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
+                        child: Text.rich(
+                          TextSpan(
+                            text: livePage!.socialGroup.name,
+                            style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                            mouseCursor: SystemMouseCursors.click,
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                final url = 'https://com.nicovideo.jp/community/${livePage!.socialGroup.id}';
+                                if (!await launchUrlString(url)) {
+                                  throw Exception('Failed to open URL: $url');
+                                }
+                              },
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
+                        child: Text('開始 ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.fromMillisecondsSinceEpoch(livePage!.program.beginTime * 1000, isUtc: true).toLocal())}')
+                      ),
+                      // Padding(
+                      //   padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
+                      //   child: Text('終了 ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.fromMillisecondsSinceEpoch(livePage!.program.endTime * 1000, isUtc: true).toLocal())}')
+                      // ),
                     ],
-                  );
-                }).toList(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.all(0.0),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                reverse: true,
+                child: Table(
+                  border: TableBorder.all(),
+                  columnWidths: const <int, TableColumnWidth>{
+                    0: IntrinsicColumnWidth(), // no
+                    1: FixedColumnWidth(32), // icon
+                    2: IntrinsicColumnWidth(), // name
+                    3: IntrinsicColumnWidth(), // time
+                    4: FlexColumnWidth(), // content
+                  },
+                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                  children: chatMessages.map((chatMessage) {
+                    Widget icon = Container();
+                    if (chatMessage is NormalChatMessage) {
+                      final iconBytes = chatMessage.commentUser?.userIconCache?.userIcon.iconBytes;
+                      if (iconBytes != null) {
+                        icon = Image.memory(iconBytes);
+                      }
+                    }
+
+                    Widget name = Container();
+                    if (chatMessage is NormalChatMessage) {
+                      final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
+                      final userId = chatMessage.chatMessage.userId;
+                      if (nickname != null) {
+                        name = SelectableText.rich(
+                          TextSpan(
+                            text: nickname,
+                            style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                            mouseCursor: SystemMouseCursors.click,
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                final url = 'https://www.nicovideo.jp/user/$userId';
+                                if (!await launchUrlString(url)) {
+                                  throw Exception('Failed to open URL: $url');
+                                }
+                              },
+                          ),
+                        );
+                      } else {
+                        name = SelectableText(userId);
+                      }
+                    }
+
+                    final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true).toLocal();
+                    final dateFormat = DateFormat('HH:mm:ss');
+                    final commentedAt = SelectableText(dateFormat.format(commentedAtDateTime));
+
+                    TextStyle? textStyle;
+                    if (chatMessage is! NormalChatMessage) {
+                      // 0x727272
+                      // 0xFF0033
+                      textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
+                    }
+                    final content = SelectableText(
+                      chatMessage.chatMessage.content,
+                      style: textStyle,
+                    );
+
+                    return TableRow(
+                      children: <Widget>[
+                        Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
+                        icon,
+                        Padding(padding: const EdgeInsets.all(8.0), child: name),
+                        Padding(padding: const EdgeInsets.all(8.0), child: commentedAt),
+                        Padding(padding: const EdgeInsets.all(8.0), child: content),
+                      ],
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           ),
