@@ -300,11 +300,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     // than having to individually change instances of widgets.
 
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
       body: Column(
         children: <Widget>[
           Column(
@@ -422,13 +417,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          logger?.info('Tapped plus');
-        },
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
