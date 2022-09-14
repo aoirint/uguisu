@@ -93,21 +93,21 @@ jobs:
         shell: bash
         run: |
           cd build/linux/x64/release
-          tar czf "../../../../release/uguisu-${{ env.VERSION }}.tar.gz" bundle
+          tar czf "${{ github.workspace }}/release/uguisu-${{ env.VERSION }}.tar.gz" bundle
 
       - name: Compress release (Windows)
         if: startsWith(matrix.os, 'windows-')
         shell: bash
         run: |
           cd build/windows/runner
-          zip -r "../../../release/uguisu-${{ env.VERSION }}.zip" Release
+          zip -r "${{ github.workspace }}/release/uguisu-${{ env.VERSION }}.zip" Release
 
       - name: Compress release (macOS)
         if: startsWith(matrix.os, 'macos-')
         shell: bash
         run: |
           cd build/macos/Build/Products/Release
-          zip -r "../../../../../release/uguisu-${{ env.VERSION }}.zip" uguisu.app
+          zip -r "${{ github.workspace }}/release/uguisu-${{ env.VERSION }}.zip" uguisu.app
 
       - name: Upload Binary to Release
         uses: svenstaro/upload-release-action@v2
