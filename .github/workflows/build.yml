@@ -92,14 +92,14 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         shell: bash
         run: |
-          mv build/linux/x64/release/bundle "uguisu-${{ env.VERSION }}"
+          mv build/linux/x64/release/bundle "uguisu-linux-amd64-${{ env.VERSION }}"
           tar czf "release/uguisu-linux-amd64-${{ env.VERSION }}.tar.gz" "uguisu-linux-amd64-${{ env.VERSION }}"
 
       - name: Compress release (Windows)
         if: startsWith(matrix.os, 'windows-')
         shell: bash
         run: |
-          mv build/windows/runner/Release "uguisu-${{ env.VERSION }}"
+          mv build/windows/runner/Release "uguisu-windows-amd64-${{ env.VERSION }}"
           7z a "release/uguisu-windows-amd64-${{ env.VERSION }}.zip" "uguisu-windows-amd64-${{ env.VERSION }}"
 
       - name: Compress release (macOS)
@@ -107,7 +107,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "uguisu-${{ env.VERSION }}"
-          mv build/macos/Build/Products/Release/uguisu.app "uguisu-${{ env.VERSION }}/"
+          mv build/macos/Build/Products/Release/uguisu.app "uguisu-macos-amd64-${{ env.VERSION }}/"
           zip -r "release/uguisu-macos-amd64-${{ env.VERSION }}.zip" "uguisu-macos-amd64-${{ env.VERSION }}"
 
       - name: Upload Binary to Release
