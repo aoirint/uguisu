@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.uguisu">
+    package="com.aoirint.uguisu">
    <application
         android:label="uguisu"
         android:name="${applicationName}"
