@@ -309,14 +309,15 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                 children: <Widget>[
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.all(8.0), 
+                      padding: const EdgeInsets.all(4.0), 
                       child: TextField(
                         controller: liveIdOrUrlTextController,
+                        style: const TextStyle(fontSize: 12.0),
                         enabled: true,
                         maxLines: 1,
                         decoration: const InputDecoration(
-                          hintText: 'lv000000000 or https://live.nicovideo.jp/watch/lv000000000',
-                          contentPadding: EdgeInsets.all(8.0),
+                          labelText: 'Niconico Live ID or URL (e.g. lv000000000, https://live.nicovideo.jp/watch/lv000000000)',
+                          contentPadding: EdgeInsets.all(4.0),
                         ),
                       ),
                     ),
