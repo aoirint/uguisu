@@ -40,6 +40,17 @@ class NiconicoLivePageServerEmulator {
           'webSocketUrl': 'ws://127.0.0.1:10081/', // watch server websocket url
         },
       },
+      'program': {
+        'title': 'DUMMY_TITLE',
+        'supplier': {
+          'name': 'DUMMY_NAME',
+          'programProviderId': '100',
+        },
+      },
+      'socialGroup': {
+        'id': 'co0000000',
+        'name': 'DUMMY_COMMUNITY_NAME',
+      },
     });
     final embeddedDataJsonSafe = const HtmlEscape().convert(embeddedDataJson);
 

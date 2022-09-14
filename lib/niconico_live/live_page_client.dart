@@ -4,10 +4,46 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
 import 'package:logging/logging.dart';
 
+class NiconicoLivePageSocialGroup {
+  String id; // community ID, co0000000
+  String name;
+
+  NiconicoLivePageSocialGroup({
+    required this.id,
+    required this.name,
+  });
+}
+
+class NiconicoLivePageProgramSupplier {
+  String name;
+  String programProviderId; // userId
+
+  NiconicoLivePageProgramSupplier({
+    required this.name,
+    required this.programProviderId,
+  });
+}
+
+class NiconicoLivePageProgram {
+  String title;
+  NiconicoLivePageProgramSupplier supplier;
+
+  NiconicoLivePageProgram({
+    required this.title,
+    required this.supplier,
+  });
+}
+
 class NiconicoLivePage {
   String webSocketUrl;
+  NiconicoLivePageProgram program;
+  NiconicoLivePageSocialGroup socialGroup;
 
-  NiconicoLivePage({required this.webSocketUrl});
+  NiconicoLivePage({
+    required this.webSocketUrl,
+    required this.program,
+    required this.socialGroup,
+  });
 }
 
 class NiconicoLivePageClient {
@@ -41,12 +77,35 @@ class NiconicoLivePageClient {
     }
 
     final props = jsonDecode(rawDataProps);
+
     final site = props['site'];
     final relive = site['relive'];
     final webSocketUrl = relive['webSocketUrl'];
 
+    final program = props['program'];
+    final programTitle = program['title'];
+
+    final programSupplier = program['supplier'];
+    final programSupplierName = programSupplier['name'];
+    final programSupplierProgramProviderId = programSupplier['programProviderId'];
+
+    final socialGroup = props['socialGroup'];
+    final socialGroupId = socialGroup['id'];
+    final socialGroupName = socialGroup['name'];
+
     return NiconicoLivePage(
       webSocketUrl: webSocketUrl,
+      program: NiconicoLivePageProgram(
+        title: programTitle,
+        supplier: NiconicoLivePageProgramSupplier(
+          name: programSupplierName,
+          programProviderId: programSupplierProgramProviderId,
+        ),
+      ),
+      socialGroup: NiconicoLivePageSocialGroup(
+        id: socialGroupId,
+        name: socialGroupName,
+      ),
     );
   }
 }
