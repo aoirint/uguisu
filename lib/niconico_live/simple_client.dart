@@ -282,9 +282,10 @@ class NiconicoLiveSimpleClient {
         // 10: 来場者 | /info 10 「DUMMY」が好きな1人が来場しました | /info 10 ニコニ広告枠から1人が来場しました
         // ?: 好きなものリスト追加
         final infoRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
-        final infoArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(infoRawMessage)[0];
-        final infoId = infoArgs[0];
-        final infoMessage = infoArgs[1];
+        final infoRawMessageSpaceIndex = infoRawMessage.indexOf(' ');
+
+        final infoId = infoRawMessage.substring(0, infoRawMessageSpaceIndex).trim();
+        final infoMessage = infoRawMessage.substring(infoRawMessageSpaceIndex+1).trim();
 
         return InfoChatMessage(chatMessage: chatMessage, infoId: infoId, infoMessage: infoMessage);
       }
