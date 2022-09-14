@@ -8,7 +8,7 @@
 PRODUCT_NAME = uguisu
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.uguisu
+PRODUCT_BUNDLE_IDENTIFIER = com.aoirint.uguisu
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2022 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2022 com.aoirint. All rights reserved.

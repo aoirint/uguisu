@@ -2,6 +2,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import 'dart:convert';
 import 'dart:io';
 import 'package:uguisu/niconico_live/niconico_live.dart';
@@ -152,7 +154,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           });
         },
         userIconLoadCacheOrNull: (userId) async {
-          final userIconJsonFile = File('cache/user_icon/$userId.json');
+          final appDocDir = await getApplicationSupportDirectory();
+          final userIconJsonFile = File(path.join(appDocDir.path, 'cache/user_icon/$userId.json'));
           if (! await userIconJsonFile.exists()) {
             logger?.warning('Cache-miss for user/$userId. User icon json not exists');
             return null;
@@ -208,11 +211,12 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             throw Exception('Unsupported content type: $contentType');
           }
 
-          final iconFile = File('cache/user_icon/$userId$iconFileNameSuffix');
+          final appDocDir = await getApplicationSupportDirectory();
+          final iconFile = File(path.join(appDocDir.path, 'cache/user_icon/$userId$iconFileNameSuffix'));
           await iconFile.parent.create(recursive: true);
           await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
 
-          final userIconJsonFile = File('cache/user_icon/$userId.json');
+          final userIconJsonFile = File(path.join(appDocDir.path, 'cache/user_icon/$userId.json'));
           final userIconRawJson = jsonEncode({
             'version': '1',
             'userId': userId,
@@ -227,7 +231,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         },
         getUserPageUri: getUserPageUri,
         userPageLoadCacheOrNull: (userId) async {
-          final userPageJsonFile = File('cache/user_page/$userId.json');
+          final appDocDir = await getApplicationSupportDirectory();
+          final userPageJsonFile = File(path.join(appDocDir.path, 'cache/user_page/$userId.json'));
           if (! await userPageJsonFile.exists()) {
             logger?.warning('Cache-miss for user/$userId. User page json not exists');
             return null;
@@ -263,7 +268,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         userPageSaveCache: (userPage) async {
           final userId = userPage.userId;
 
-          final userPageJsonFile = File('cache/user_page/$userId.json');
+          final appDocDir = await getApplicationSupportDirectory();
+          final userPageJsonFile = File(path.join(appDocDir.path, 'cache/user_page/$userId.json'));
           await userPageJsonFile.parent.create(recursive: true);
           final userPageRawJson = jsonEncode({
             'version': '1',
