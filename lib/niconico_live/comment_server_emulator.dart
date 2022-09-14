@@ -82,7 +82,7 @@ class NiconicoLiveCommentServerEmulator {
     for (var commentNo=1; commentNo<=10; commentNo+=1) {
       ws.add(jsonEncode({
         'chat': {
-          'anonimity': 1, // optional, only if 184
+          'anonymity': 1, // optional, only if 184
           'content': 'mycontent $commentNo',
           'date': 1663052000 + commentNo,
           'date_usec': 660000,
@@ -102,7 +102,7 @@ class NiconicoLiveCommentServerEmulator {
     for (var commentNo=11; commentNo<=15; commentNo+=1) {
       ws.add(jsonEncode({
         'chat': {
-          'anonimity': 1, // optional, only if 184
+          'anonymity': 1, // optional, only if 184
           'content': 'mycontent $commentNo',
           'date': 1663052000 + commentNo, // utc timestamp
           'date_usec': 660000,
@@ -130,7 +130,7 @@ class NiconicoLiveCommentServerEmulator {
     }
     ws.add(jsonEncode({
       'chat': {
-        'anonimity': 1, // optional, only if 184
+        'anonymity': 1, // optional, only if 184
         'content': '/info 8 第2位にランクインしました',
         'date': 1663052000 + 21, // utc timestamp
         'date_usec': 660000,
@@ -144,7 +144,7 @@ class NiconicoLiveCommentServerEmulator {
     }));
     ws.add(jsonEncode({
       'chat': {
-        'anonimity': 1, // optional, only if 184
+        'anonymity': 1, // optional, only if 184
         'content': '/info 10 「DUMMY」が好きな1人が来場しました',
         'date': 1663052000 + 22, // utc timestamp
         'date_usec': 660000,
@@ -158,7 +158,7 @@ class NiconicoLiveCommentServerEmulator {
     }));
     ws.add(jsonEncode({
       'chat': {
-        'anonimity': 1, // optional, only if 184
+        'anonymity': 1, // optional, only if 184
         'content': '/spi "「DUMMY」がリクエストされました"',
         'date': 1663052000 + 23, // utc timestamp
         'date_usec': 660000,
@@ -177,7 +177,7 @@ class NiconicoLiveCommentServerEmulator {
     });
     ws.add(jsonEncode({
       'chat': {
-        'anonimity': 1, // optional, only if 184
+        'anonymity': 1, // optional, only if 184
         'content': '/nicoad $nicoAdJson',
         'date': 1663052000 + 24, // utc timestamp
         'date_usec': 660000,
@@ -191,7 +191,7 @@ class NiconicoLiveCommentServerEmulator {
     }));
     ws.add(jsonEncode({
       'chat': {
-        'anonimity': 1, // optional, only if 184
+        'anonymity': 1, // optional, only if 184
         'content': '/gift gourmet_kiritanpo 100 "DUMMY_USER" 600 "" "きりたんぽ" 1',
         'date': 1663052000 + 25, // utc timestamp
         'date_usec': 660000,
@@ -206,7 +206,7 @@ class NiconicoLiveCommentServerEmulator {
     await Future.delayed(const Duration(seconds: 1));
     ws.add(jsonEncode({
       'chat': {
-        'anonimity': 1, // optional, only if 184
+        'anonymity': 1, // optional, only if 184
         'content': '/disconnect',
         'date': 1663052000 + 26, // utc timestamp
         'date_usec': 660000,

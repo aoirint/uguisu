@@ -11,7 +11,7 @@ class PingIsolateOptions {
 }
 
 class ChatMessage {
-  int? anonimity;
+  int? anonymity;
   String content;
   int date;
   int dateUsec;
@@ -23,7 +23,7 @@ class ChatMessage {
   int vpos;
 
   ChatMessage({
-    this.anonimity,
+    this.anonymity,
     required this.content,
     required this.date,
     required this.dateUsec,
@@ -175,7 +175,7 @@ class NiconicoLiveCommentClient {
       Map<String, dynamic> chat = message['chat'];
 
       onChatMessage?.call(ChatMessage(
-        anonimity: chat['anonimity'],
+        anonymity: chat['anonymity'],
         content: chat['content'],
         date: chat['date'],
         dateUsec: chat['date_usec'],

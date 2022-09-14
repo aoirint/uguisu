@@ -34,6 +34,16 @@ class NiconicoUserPageServerEmulator {
   }
 
   void __handle(HttpRequest request) {
+    final match = RegExp(r'^/user_page/(.+)$').firstMatch(request.uri.path);
+    if (match == null) {
+      throw Exception('Invalid request path: ${request.uri.path}');
+    }
+
+    final userId = match.group(1);
+    if (userId == null) {
+      throw Exception('userId != null');
+    }
+
     final initialDataJson = jsonEncode({
       'userDetails': {
         'userDetails': {
@@ -41,7 +51,7 @@ class NiconicoUserPageServerEmulator {
             'id': 100,
             'nickname': 'DUMMY',
             'icons': {
-              'large': 'http://127.0.0.1:80024/?1600000000', // query: last updated time
+              'large': 'http://127.0.0.1:10084/user_icon/$userId?1600000000', // query: last updated time
             },
           },
         },

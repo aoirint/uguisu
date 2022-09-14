@@ -1,14 +1,18 @@
+import 'dart:io';
+
 import 'package:logging/logging.dart';
 import 'live_page_server_emulator.dart';
 import 'watch_server_emulator.dart';
 import 'comment_server_emulator.dart';
 import 'user_page_server_emulator.dart';
+import 'user_icon_server_emulator.dart';
 
 class NiconicoLiveSimpleServerEmulator {
   NiconicoLivePageServerEmulator? livePageServer;
   NiconicoLiveWatchServerEmulator? watchServer;
   NiconicoLiveCommentServerEmulator? commentServer;
   NiconicoUserPageServerEmulator? userPageServer;
+  NiconicoUserIconServerEmulator? userIconServer;
 
   late Logger logger;
 
@@ -32,6 +36,23 @@ class NiconicoLiveSimpleServerEmulator {
     final userPageServer = NiconicoUserPageServerEmulator();
     await userPageServer.start('127.0.0.1', 10083);
     this.userPageServer = userPageServer;
+
+    final userIconServer = NiconicoUserIconServerEmulator();
+    await userIconServer.start(
+      host: '127.0.0.1',
+      port: 10084,
+      loadIconFromPath: (path) {
+        if (path == '/user_icon/100') {
+          return UserIconData(contentType: 'image/png', bytes: File('assets/user_icon_100_150x150.png').readAsBytesSync());
+        }
+        if (path == '/user_icon/101') {
+          return UserIconData(contentType: 'image/png', bytes: File('assets/user_icon_101_150x150.png').readAsBytesSync());
+        }
+
+        return null;
+      },
+    );
+    this.userIconServer = userIconServer;
   }
 
   Future<void> stop() async {
@@ -39,5 +60,6 @@ class NiconicoLiveSimpleServerEmulator {
     watchServer?.stop();
     livePageServer?.stop();
     userPageServer?.stop();
+    userIconServer?.stop();
   }
 }
