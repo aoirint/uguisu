@@ -275,58 +275,62 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       body: Column(
         children: <Widget>[
           Flexible(
-            child: Table(
-              border: TableBorder.all(),
-              columnWidths: const <int, TableColumnWidth>{
-                0: FlexColumnWidth(), // no
-                1: FixedColumnWidth(32), // icon
-                2: FlexColumnWidth(), // name
-                3: FlexColumnWidth(), // time
-                4: FlexColumnWidth(), // content
-              },
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              children: chatMessages.map((chatMessage) {
-                Widget icon = Container();
-                if (chatMessage is NormalChatMessage) {
-                  final iconBytes = chatMessage.commentUser?.userIconCache?.userIcon.iconBytes;
-                  if (iconBytes != null) {
-                    icon = Image.memory(iconBytes);
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              reverse: true,
+              child: Table(
+                border: TableBorder.all(),
+                columnWidths: const <int, TableColumnWidth>{
+                  0: IntrinsicColumnWidth(), // no
+                  1: FixedColumnWidth(32), // icon
+                  2: IntrinsicColumnWidth(), // name
+                  3: IntrinsicColumnWidth(), // time
+                  4: FlexColumnWidth(), // content
+                },
+                defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                children: chatMessages.map((chatMessage) {
+                  Widget icon = Container();
+                  if (chatMessage is NormalChatMessage) {
+                    final iconBytes = chatMessage.commentUser?.userIconCache?.userIcon.iconBytes;
+                    if (iconBytes != null) {
+                      icon = Image.memory(iconBytes);
+                    }
                   }
-                }
 
-                Widget name = Container();
-                if (chatMessage is NormalChatMessage) {
-                  final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
-                  if (nickname != null) {
-                    name = Text(nickname);
+                  Widget name = Container();
+                  if (chatMessage is NormalChatMessage) {
+                    final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
+                    if (nickname != null) {
+                      name = SelectableText(nickname);
+                    }
                   }
-                }
 
-                final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true);
-                final dateFormat = DateFormat('HH:mm:ss');
-                final commentedAt = Text(dateFormat.format(commentedAtDateTime));
+                  final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true);
+                  final dateFormat = DateFormat('HH:mm:ss');
+                  final commentedAt = SelectableText(dateFormat.format(commentedAtDateTime));
 
-                TextStyle? textStyle;
-                if (chatMessage is! NormalChatMessage) {
-                  // 0x727272
-                  // 0xFF0033
-                  textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
-                }
-                final content = Text(
-                  chatMessage.chatMessage.content,
-                  style: textStyle,
-                );
+                  TextStyle? textStyle;
+                  if (chatMessage is! NormalChatMessage) {
+                    // 0x727272
+                    // 0xFF0033
+                    textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
+                  }
+                  final content = SelectableText(
+                    chatMessage.chatMessage.content,
+                    style: textStyle,
+                  );
 
-                return TableRow(
-                  children: <Widget>[
-                    Text('${chatMessage.chatMessage.no}'),
-                    icon,
-                    name,
-                    commentedAt,
-                    content,
-                  ],
-                );
-              }).toList(),
+                  return TableRow(
+                    children: <Widget>[
+                      Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
+                      icon,
+                      Padding(padding: const EdgeInsets.all(8.0), child: name),
+                      Padding(padding: const EdgeInsets.all(8.0), child: commentedAt),
+                      Padding(padding: const EdgeInsets.all(8.0), child: content),
+                    ],
+                  );
+                }).toList(),
+              ),
             ),
           ),
           const Text(
