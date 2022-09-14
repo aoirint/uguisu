@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -112,6 +113,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
             setState(() {
               chatMessages.add(cm);
+              chatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
             });
           });
         },
@@ -273,30 +275,59 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       body: Column(
         children: <Widget>[
           Flexible(
-            child: ListView.builder(
-              itemCount: chatMessages.length,
-              itemBuilder: (context, itemIndex) {
-                final chatMessage = chatMessages[itemIndex];
-                TextStyle? textStyle;
-                Image? icon;
+            child: Table(
+              border: TableBorder.all(),
+              columnWidths: const <int, TableColumnWidth>{
+                0: FlexColumnWidth(), // no
+                1: FixedColumnWidth(32), // icon
+                2: FlexColumnWidth(), // name
+                3: FlexColumnWidth(), // time
+                4: FlexColumnWidth(), // content
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              children: chatMessages.map((chatMessage) {
+                Widget icon = Container();
                 if (chatMessage is NormalChatMessage) {
                   final iconBytes = chatMessage.commentUser?.userIconCache?.userIcon.iconBytes;
-                  icon = iconBytes != null ? Image.memory(iconBytes) : null;
-                } else {
+                  if (iconBytes != null) {
+                    icon = Image.memory(iconBytes);
+                  }
+                }
+
+                Widget name = Container();
+                if (chatMessage is NormalChatMessage) {
+                  final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
+                  if (nickname != null) {
+                    name = Text(nickname);
+                  }
+                }
+
+                final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true);
+                final dateFormat = DateFormat('HH:mm:ss');
+                final commentedAt = Text(dateFormat.format(commentedAtDateTime));
+
+                TextStyle? textStyle;
+                if (chatMessage is! NormalChatMessage) {
                   // 0x727272
                   // 0xFF0033
                   textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
                 }
-
-                return ListTile(
-                  leading: icon,
-                  title: Text(chatMessage.chatMessage.content, style: textStyle),
-                  onTap: () {
-                    logger?.info('Tapped ${chatMessage.chatMessage.content}');
-                  },
+                final content = Text(
+                  chatMessage.chatMessage.content,
+                  style: textStyle,
                 );
-              },
-            )
+
+                return TableRow(
+                  children: <Widget>[
+                    Text('${chatMessage.chatMessage.no}'),
+                    icon,
+                    name,
+                    commentedAt,
+                    content,
+                  ],
+                );
+              }).toList(),
+            ),
           ),
           const Text(
             'You have pushed the button this many times:',
