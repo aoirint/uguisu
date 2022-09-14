@@ -145,6 +145,11 @@ class UnknownChatMessage extends BaseChatMessage {
   );
 }
 
+class NoWatchWebSocketUrlFoundException implements Exception {
+  String message;
+  NoWatchWebSocketUrlFoundException(this.message);
+}
+
 class NiconicoLiveSimpleClient {
   final String userAgent;
 
@@ -203,6 +208,11 @@ class NiconicoLiveSimpleClient {
 
     NiconicoLivePage livePage = await NiconicoLivePageClient().get(uri: Uri.parse(livePageUrl), userAgent: userAgent);
     this.livePage = livePage;
+
+    // ケース: 一般会員・非ログイン時の放送終了済み番組に接続した
+    if (livePage.webSocketUrl == '') {
+      throw NoWatchWebSocketUrlFoundException('No watch web socket url found. Maybe you have no access to the requested program.');
+    }
 
     NiconicoLiveWatchClient watchClient = NiconicoLiveWatchClient();
     watchClient.connect(
