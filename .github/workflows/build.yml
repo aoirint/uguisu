@@ -1,0 +1,105 @@
+name: Build
+
+on:
+  release:
+    types:
+      - created
+
+env:
+  VERSION: ${{ (github.event.release.tag_name != '' && github.event.release.tag_name) || '0.0.0' }}
+  FLUTTER_VERSION: '3.3.1'
+
+jobs:
+  release-binary:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          -
+            os: 'ubuntu-20.04'
+            architecture_name: 'x64'
+            config_option: '--enable-linux-desktop'
+            build_subcommand: 'linux'
+            release_path: uguisu-${{ env.VERSION }}.tar.gz
+            sed: 'sed'
+          -
+            os: 'windows-2019'
+            architecture_name: 'x64'
+            config_option: '--enable-windows-desktop'
+            build_subcommand: 'windows'
+            release_path: uguisu-${{ env.VERSION }}.zip
+            sed: 'sed'
+          -
+            os: 'macos-11'
+            architecture_name: 'x64'
+            config_option: '--enable-macos-desktop'
+            build_subcommand: 'macos'
+            release_path: uguisu-${{ env.VERSION }}.zip
+            sed: 'gsed'
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: subosito/flutter-action@v2
+        id: flutter-action
+        with:
+          cache: true
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          architecture: ${{ matrix.architecture_name }}
+
+      - shell: bash
+        run: flutter --version
+
+      - name: Install Dependencies
+        shell: bash
+        run: |
+          flluter pub get
+
+      - name: Install gsed for macOS
+        if: startsWith(matrix.os, 'macos-')
+        shell: bash
+        run: |
+          brew install gnu-sed
+
+      - name: Replace Version
+        shell: bash
+        run: |
+          ${{ matrix.sed }} -i "s/version: '0.0.0'/version: '${{ env.VERSION }}'/" pubspec.yaml
+
+      - name: Configure
+        shell: bash
+        run: |
+          flutter config ${{ matrix.config_option }}
+
+      - name: Build Binary
+        shell: bash
+        run: |
+          flutter build ${{ matrix.build_subcommand }}
+
+      - name: Compress release (Linux)
+        if: startsWith(matrix.os, 'ubuntu-')
+        shell: bash
+        run: |
+          tar czf "${{ matrix.release_name }}" 'build/linux/x64/release/bundle'
+
+      - name: Compress release (Windows)
+        if: startsWith(matrix.os, 'windows-')
+        shell: bash
+        run: |
+          zip -r "${{ matrix.release_name }}" 'build/linux/x64/release/bundle'
+
+      - name: Compress release (macOS)
+        if: startsWith(matrix.os, 'macos-')
+        shell: bash
+        run: |
+          zip -r "${{ matrix.release_name }}" 'build/macos/Build/Products/Release/uguisu.app'
+
+      - name: Upload Binary to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.release_name }}
+          tag: ${{ github.ref }}
