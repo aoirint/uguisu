@@ -92,22 +92,23 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu-')
         shell: bash
         run: |
-          cd build/linux/x64/release
-          tar czf "${{ github.workspace }}/release/uguisu-${{ env.VERSION }}.tar.gz" bundle
+          mv build/linux/x64/release/bundle "uguisu-${{ env.VERSION }}"
+          tar czf "release/uguisu-${{ env.VERSION }}.tar.gz" "uguisu-${{ env.VERSION }}"
 
       - name: Compress release (Windows)
         if: startsWith(matrix.os, 'windows-')
         shell: bash
         run: |
-          cd build/windows/runner
-          zip -r "${{ github.workspace }}/release/uguisu-${{ env.VERSION }}.zip" Release
+          mv build/windows/runner/Release "uguisu-${{ env.VERSION }}"
+          zip -r "release/uguisu-${{ env.VERSION }}.zip" "uguisu-${{ env.VERSION }}"
 
       - name: Compress release (macOS)
         if: startsWith(matrix.os, 'macos-')
         shell: bash
         run: |
-          cd build/macos/Build/Products/Release
-          zip -r "${{ github.workspace }}/release/uguisu-${{ env.VERSION }}.zip" uguisu.app
+          mkdir -p "uguisu-${{ env.VERSION }}"
+          mv build/macos/Build/Products/Release/uguisu.app "uguisu-${{ env.VERSION }}/"
+          zip -r "release/uguisu-${{ env.VERSION }}.zip" "uguisu-${{ env.VERSION }}"
 
       - name: Upload Binary to Release
         uses: svenstaro/upload-release-action@v2
