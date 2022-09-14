@@ -100,7 +100,7 @@ jobs:
         shell: bash
         run: |
           mv build/windows/runner/Release "uguisu-${{ env.VERSION }}"
-          zip -r "release/uguisu-${{ env.VERSION }}.zip" "uguisu-${{ env.VERSION }}"
+          7z a "release/uguisu-${{ env.VERSION }}.zip" "uguisu-${{ env.VERSION }}"
 
       - name: Compress release (macOS)
         if: startsWith(matrix.os, 'macos-')
