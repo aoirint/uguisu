@@ -47,8 +47,7 @@ class NiconicoUserPageClient {
     }
 
     final initialData = jsonDecode(rawDataInitialData);
-    final initConfig = initialData['initConfig'];
-    final userDetails1 = initConfig['userDetails'];
+    final userDetails1 = initialData['userDetails'];
     final userDetails2 = userDetails1['userDetails'];
     final user = userDetails2['user'];
     final id = user['id'];

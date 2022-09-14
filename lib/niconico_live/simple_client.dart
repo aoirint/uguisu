@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
-import 'package:uguisu/niconico_live/niconico_live.dart';
+import 'package:uguisu/niconico_live/user_page_cache_client.dart';
 import 'live_page_client.dart';
 import 'watch_client.dart';
 import 'comment_client.dart';
+import 'user_page_client.dart';
+import 'user_icon_cache_client.dart';
 
 class Room {
   RoomMessage roomMessage;
@@ -16,6 +18,18 @@ class Room {
   });
 }
 
+class CommentUser {
+  int userId;
+  NiconicoUserPageCache? userPageCache;
+  NiconicoUserIconCache? userIconCache;
+
+  CommentUser({
+    required this.userId,
+    this.userPageCache,
+    this.userIconCache,
+  });
+}
+
 class BaseChatMessage {
   ChatMessage chatMessage;
   BaseChatMessage({
@@ -24,11 +38,29 @@ class BaseChatMessage {
 }
 
 class NormalChatMessage extends BaseChatMessage {
+  CommentUser? commentUser;
+
   NormalChatMessage({
     required chatMessage,
+    this.commentUser,
   }) : super(
     chatMessage: chatMessage,
   );
+}
+
+class LazyNormalChatMessage extends BaseChatMessage {
+  Future<CommentUser?> Function(LazyNormalChatMessage chatMessage) resolveCommentUser;
+
+  LazyNormalChatMessage({
+    required chatMessage,
+    required this.resolveCommentUser,
+  }) : super(
+    chatMessage: chatMessage,
+  );
+
+  Future<NormalChatMessage> resolve() async {
+    return NormalChatMessage(chatMessage: chatMessage, commentUser: await resolveCommentUser(this));
+  }
 }
 
 class EmotionChatMessage extends BaseChatMessage {
@@ -119,13 +151,15 @@ class NiconicoLiveSimpleClient {
   String? livePageUrl;
   NiconicoLivePage? livePage;
   NiconicoLiveWatchClient? watchClient;
-  // TODO: user page and icon manager
+  NiconicoUserIconCacheClient? userIconCacheClient;
+  NiconicoUserPageCacheClient? userPageCacheClient;
 
   late List<Room> rooms;
 
   Function(ScheduleMessage scheduleMessage)? onScheduleMessage;
   Function(StatisticsMessage statisticsMessage)? onStatisticsMessage;
   Function(BaseChatMessage chatMessage)? onChatMessage;
+  Future<Uri> Function(int userId)? getUserPageUri;
 
   late Logger logger;
 
@@ -141,11 +175,31 @@ class NiconicoLiveSimpleClient {
     required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
     required Function(BaseChatMessage chatMessage) onChatMessage,
+    required Future<NiconicoUserIconCache?> Function(int userId) userIconLoadCacheOrNull,
+    required Future<void> Function(NiconicoUserIconCache userIcon) userIconSaveCache,
+    required Future<Uri> Function(int userId) getUserPageUri,
+    required Future<NiconicoUserPageCache?> Function(int userId) userPageLoadCacheOrNull,
+    required Future<void> Function(NiconicoUserPageCache userPage) userPageSaveCache,
   }) async {
     this.livePageUrl = livePageUrl;
     this.onScheduleMessage = onScheduleMessage;
     this.onStatisticsMessage = onStatisticsMessage;
     this.onChatMessage = onChatMessage;
+    this.getUserPageUri = getUserPageUri;
+
+    NiconicoUserIconCacheClient userIconCacheClient = NiconicoUserIconCacheClient(
+      userAgent: userAgent,
+      loadCacheOrNull: userIconLoadCacheOrNull,
+      saveCache: userIconSaveCache,
+    );
+    this.userIconCacheClient = userIconCacheClient;
+
+    NiconicoUserPageCacheClient userPageCacheClient = NiconicoUserPageCacheClient(
+      userAgent: userAgent,
+      loadCacheOrNull: userPageLoadCacheOrNull,
+      saveCache: userPageSaveCache,
+    );
+    this.userPageCacheClient = userPageCacheClient;
 
     NiconicoLivePage livePage = await NiconicoLivePageClient().get(uri: Uri.parse(livePageUrl), userAgent: userAgent);
     this.livePage = livePage;
@@ -189,6 +243,26 @@ class NiconicoLiveSimpleClient {
 
   BaseChatMessage __parseChatMessage(ChatMessage chatMessage) {
     final comment = chatMessage.content;
+    if (chatMessage.premium == null || chatMessage.premium == 0 || chatMessage.premium == 1) {
+      return LazyNormalChatMessage(chatMessage: chatMessage, resolveCommentUser: (chatMessage) async {
+        final is184 = chatMessage.chatMessage.anonymity;
+        if (is184 == 1) {
+          return null;
+        }
+
+        final userIdInt = int.parse(chatMessage.chatMessage.userId);
+
+        final userPageUri = await getUserPageUri?.call(userIdInt);
+        if (userPageUri == null) {
+          throw Exception('getUserPageUri != null');
+        }
+
+        final userPageCache = await userPageCacheClient?.loadOrFetchUserPage(userId: userIdInt, userPageUri: userPageUri);
+        final userIconCache = userPageCache != null ? await userIconCacheClient?.loadOrFetchIcon(userId: userIdInt, iconUri: Uri.parse(userPageCache.userPage.iconUrl)) : null;
+
+        return CommentUser(userId: userIdInt, userPageCache: userPageCache, userIconCache: userIconCache);
+      },);
+    }
 
     if (chatMessage.premium == 2) { // 運営コメント
       if (comment == '/disconnect') { // 番組終了
