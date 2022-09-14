@@ -4,33 +4,6 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
-import 'package:uguisu/niconico_live/user_icon_cache_client.dart';
-import 'package:uguisu/niconico_live/user_icon_client.dart';
-import 'package:uguisu/niconico_live/user_page_client.dart';
-import 'package:uguisu/niconico_live/user_page_cache_client.dart';
-
-Future<void> __startCommentClient({
-  required String commentServerWebSocketUrl,
-  required String userAgent,
-  required String thread,
-  String? threadkey,
-  required Function(ChatMessage) onChatMessage,
-}) async {
-  final commentClient = NiconicoLiveCommentClient();
-  try {
-    await commentClient.connect(
-      websocketUrl: commentServerWebSocketUrl,
-      userAgent: userAgent,
-      thread: thread,
-      threadkey: threadkey,
-      onChatMessage: onChatMessage,
-    );
-
-    await Future.delayed(const Duration(seconds: 3));
-  } finally {
-    await commentClient.stop();
-  }
-}
 
 Future<void> main(List<String> args) async {
   Logger.root.level = Level.ALL;

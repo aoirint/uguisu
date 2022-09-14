@@ -243,7 +243,12 @@ class NiconicoLiveSimpleClient {
 
   BaseChatMessage __parseChatMessage(ChatMessage chatMessage) {
     final comment = chatMessage.content;
-    if (chatMessage.premium == null || chatMessage.premium == 0 || chatMessage.premium == 1) {
+    if (
+      chatMessage.premium == null || // 一般会員
+      chatMessage.premium == 0 || // 不明
+      chatMessage.premium == 1 || // プレミアム会員
+      (chatMessage.anonymity == null && chatMessage.premium == 3) // 放送主コメント
+    ) {
       return LazyNormalChatMessage(chatMessage: chatMessage, resolveCommentUser: (chatMessage) async {
         final is184 = chatMessage.chatMessage.anonymity;
         if (is184 == 1) {
