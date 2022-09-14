@@ -106,8 +106,8 @@ jobs:
         if: startsWith(matrix.os, 'macos-')
         shell: bash
         run: |
-          mkdir -p "uguisu-${{ env.VERSION }}"
-          mv build/macos/Build/Products/Release/uguisu.app "uguisu-macos-amd64-${{ env.VERSION }}/"
+          mkdir -p "uguisu-macos-amd64-${{ env.VERSION }}"
+          mv build/macos/Build/Products/Release/uguisu.app "uguisu-macos-amd64-${{ env.VERSION }}/uguisu.app"
           zip -r "release/uguisu-macos-amd64-${{ env.VERSION }}.zip" "uguisu-macos-amd64-${{ env.VERSION }}"
 
       - name: Upload Binary to Release
