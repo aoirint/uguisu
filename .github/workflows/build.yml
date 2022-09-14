@@ -20,21 +20,18 @@ jobs:
             architecture_name: 'x64'
             config_option: '--enable-linux-desktop'
             build_subcommand: 'linux'
-            release_path: uguisu-${{ env.VERSION }}.tar.gz
             sed: 'sed'
           -
             os: 'windows-2019'
             architecture_name: 'x64'
             config_option: '--enable-windows-desktop'
             build_subcommand: 'windows'
-            release_path: uguisu-${{ env.VERSION }}.zip
             sed: 'sed'
           -
             os: 'macos-11'
             architecture_name: 'x64'
             config_option: '--enable-macos-desktop'
             build_subcommand: 'macos'
-            release_path: uguisu-${{ env.VERSION }}.zip
             sed: 'gsed'
 
     runs-on: ${{ matrix.os }}
@@ -79,27 +76,33 @@ jobs:
         run: |
           flutter build ${{ matrix.build_subcommand }}
 
+      - name: Create Release directory
+        shell: bash
+        run: |
+          mkdir -p release
+
       - name: Compress release (Linux)
         if: startsWith(matrix.os, 'ubuntu-')
         shell: bash
         run: |
-          tar czf "${{ matrix.release_name }}" 'build/linux/x64/release/bundle'
+          tar czf "release/uguisu-${{ env.VERSION }}.tar.gz" 'build/linux/x64/release/bundle'
 
       - name: Compress release (Windows)
         if: startsWith(matrix.os, 'windows-')
         shell: bash
         run: |
-          zip -r "${{ matrix.release_name }}" 'build/linux/x64/release/bundle'
+          zip -r "release/uguisu-${{ env.VERSION }}.zip" 'build/linux/x64/release/bundle'
 
       - name: Compress release (macOS)
         if: startsWith(matrix.os, 'macos-')
         shell: bash
         run: |
-          zip -r "${{ matrix.release_name }}" 'build/macos/Build/Products/Release/uguisu.app'
+          zip -r "release/uguisu-${{ env.VERSION }}.zip" 'build/macos/Build/Products/Release/uguisu.app'
 
       - name: Upload Binary to Release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ matrix.release_name }}
+          file: release/*
+          file_glob: true
           tag: ${{ github.ref }}
