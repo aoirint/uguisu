@@ -405,6 +405,14 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           ),
                         ),
                       ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
+                        child: Text('開始 ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.fromMillisecondsSinceEpoch(livePage!.program.beginTime * 1000, isUtc: true).toLocal())}')
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
+                        child: Text('終了 ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.fromMillisecondsSinceEpoch(livePage!.program.endTime * 1000, isUtc: true).toLocal())}')
+                      ),
                     ],
                   ),
                 ],
@@ -460,7 +468,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       }
                     }
 
-                    final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true);
+                    final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true).toLocal();
                     final dateFormat = DateFormat('HH:mm:ss');
                     final commentedAt = SelectableText(dateFormat.format(commentedAtDateTime));
 

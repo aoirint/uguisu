@@ -27,10 +27,14 @@ class NiconicoLivePageProgramSupplier {
 class NiconicoLivePageProgram {
   String title;
   NiconicoLivePageProgramSupplier supplier;
+  int beginTime; // unix epoch (UTC, seconds)
+  int endTime; // unix epoch (UTC, seconds)
 
   NiconicoLivePageProgram({
     required this.title,
     required this.supplier,
+    required this.beginTime,
+    required this.endTime,
   });
 }
 
@@ -84,6 +88,8 @@ class NiconicoLivePageClient {
 
     final program = props['program'];
     final programTitle = program['title'];
+    final programBeginTime = program['beginTime'];
+    final programEndTime = program['endTime'];
 
     final programSupplier = program['supplier'];
     final programSupplierName = programSupplier['name'];
@@ -101,6 +107,8 @@ class NiconicoLivePageClient {
           name: programSupplierName,
           programProviderId: programSupplierProgramProviderId,
         ),
+        beginTime: programBeginTime,
+        endTime: programEndTime,
       ),
       socialGroup: NiconicoLivePageSocialGroup(
         id: socialGroupId,

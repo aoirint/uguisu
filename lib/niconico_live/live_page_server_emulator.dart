@@ -46,6 +46,8 @@ class NiconicoLivePageServerEmulator {
           'name': 'DUMMY_NAME',
           'programProviderId': '100',
         },
+        'beginTime': 1663156821,
+        'endTime': 1663178421,
       },
       'socialGroup': {
         'id': 'co0000000',
