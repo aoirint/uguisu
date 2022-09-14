@@ -333,9 +333,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               ),
             ),
           ),
-          const Text(
-            'You have pushed the button this many times:',
-          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
