@@ -78,7 +78,25 @@ class NiconicoLiveCommentClient {
     );
     this.client = client;
 
-    fetchComments(thread: thread, threadkey: threadkey, resFrom: -150, userId: userId);
+    final threadObj = {
+      'nicoru': 0,
+      'res_from': -150,
+      'scores': 1,
+      'thread': thread,
+      'user_id': userId ?? 'guest',
+      'version': '20061206',
+      'with_global': 1,
+    };
+
+    if (threadkey != null) {threadObj['threadkey'] = threadkey; }
+
+    client!.add(jsonEncode([
+      { 'ping': { 'content': 'rs:0' } },
+      { 'ping': { 'content': 'ps:0' } },
+      { 'thread': threadObj },
+      { 'ping': { 'content': 'pf:0' } },
+      { 'ping': { 'content': 'rf:0' } },
+    ]));
 
     final pingTimingReceivePort = ReceivePort();
     pingTimingReceivePort.listen((message) {
@@ -125,39 +143,6 @@ class NiconicoLiveCommentClient {
     ));
 
     this.onChatMessage = onChatMessage;
-  }
-
-  void fetchComments({
-    required String thread,
-    String? threadkey,
-    required int resFrom,
-    String? userId,
-    int? when,
-  }) {
-    if (client == null) {
-      throw Exception('client != null');
-    }
-
-    final threadObj = {
-      'nicoru': 0,
-      'res_from': resFrom,
-      'scores': 1,
-      'thread': thread,
-      'user_id': userId ?? 'guest',
-      'version': '20061206',
-      'with_global': 1,
-    };
-
-    if (threadkey != null) {threadObj['threadkey'] = threadkey; }
-    if (when != null) { threadObj['when'] = when; }
-
-    client!.add(jsonEncode([
-      { 'ping': { 'content': 'rs:0' } },
-      { 'ping': { 'content': 'ps:0' } },
-      { 'thread': threadObj },
-      { 'ping': { 'content': 'pf:0' } },
-      { 'ping': { 'content': 'rf:0' } },
-    ]));
   }
 
   Future<void> stop() async {
