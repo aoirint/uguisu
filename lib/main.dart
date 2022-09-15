@@ -719,6 +719,14 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     });
   }
 
+  int? getMinCommentNo() {
+    if (chatMessages.isEmpty) return null;
+
+    final minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+    final minNo = minNoChatMessage.chatMessage.no;
+    return minNo;
+  }
+
   @override
   Widget build(BuildContext context) {
     final loginCookieData = context.watch<NiconicoLoginCookieData>();
@@ -1007,6 +1015,91 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton(
+                  onPressed: livePage == null || getMinCommentNo() == 1 ? null : () async {
+                    if (chatMessages.isEmpty) {
+                      logger?.warning('No fetched chat messages');
+                      return;
+                    }
+
+                    const userAgent = 'uguisu/0.0.0';
+                    const windowSize = 200;
+
+                    if (simpleClient!.rooms.isEmpty) {
+                      logger?.warning('No room');
+                      return;
+                    }
+
+                    final room = simpleClient!.rooms[0];
+
+                    // final maxNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no > next.chatMessage.no ? cur : next);
+                    // final maxNo = maxNoChatMessage.chatMessage.no;
+
+                    var minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+                    var minNo = minNoChatMessage.chatMessage.no;
+                    var minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
+
+                    final windowNum = (minNo / windowSize).ceil();
+                    // final windowHeadNoList = List<int>.generate(windowNum, (index) => minNo - windowSize * (index + 1));
+
+                    final newChatMessages = <BaseChatMessage>[];
+                    var rvalue = 0;
+                    var pvalue = 0;
+                    for (var windowIndex=0; windowIndex<windowNum; windowIndex+=1) {
+                      logger?.info('Window $windowIndex/$windowNum (minNo: $minNo, minWhen: $minWhen)');
+
+                      final thread = await NiconicoLiveCommentWaybackClient().fetchWaybackThread(
+                        websocketUrl: room.roomMessage.messageServer.uri,
+                        userAgent: userAgent,
+                        thread: room.roomMessage.threadId,
+                        resFrom: -windowSize,
+                        userId: loginCookieData.loginCookie!.userId,
+                        when: (minWhen.millisecondsSinceEpoch / 1000).floor(),
+                        rvalue: rvalue,
+                        pvalue: pvalue,
+                      );
+
+                      // TODO: commonize parse and resolve chat message
+                      for (final chatMessage in thread.chatMessages) {
+                        var cm = simpleClient!.parseChatMessage(chatMessage);
+
+                        if (cm is LazyNormalChatMessage) {
+                          cm = await cm.resolve();
+                        }
+
+                        newChatMessages.add(cm);
+                      }
+
+                      if (newChatMessages.isEmpty) {
+                        logger?.info('No new chat message, break');
+                        break;
+                      }
+
+                      minNoChatMessage = newChatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+                      minNo = minNoChatMessage.chatMessage.no;
+                      minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
+
+                      rvalue += 1;
+                      pvalue += 5;
+                      await Future.delayed(const Duration(milliseconds: 100));
+                    }
+
+                    setState(() {
+                      chatMessages.addAll(newChatMessages);
+                      chatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+                    });
+
+                    // const firstNo = 1;
+                    // const windowSize = 150;
+                    // final windowNum = ((minNo - firstNo) / windowSize).ceil();
+                    // final windowHeadNoList =List<int>.generate(windowNum, (index) => firstNo + windowSize * index);
+                    // print(windowHeadNoList);
+                  },
+                  child: const Text('Fetch All'),
                 ),
               ),
             ],

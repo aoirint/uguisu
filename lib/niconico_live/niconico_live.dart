@@ -14,3 +14,4 @@ export 'models.dart';
 export 'simple_client.dart';
 export 'simple_server_emulator.dart';
 export 'login_client.dart';
+export 'comment_wayback_client.dart';

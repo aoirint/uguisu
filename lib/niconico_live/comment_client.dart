@@ -76,6 +76,7 @@ class NiconicoLiveCommentClient {
       },
       cancelOnError: true,
     );
+    this.client = client;
 
     final threadObj = {
       'nicoru': 0,
