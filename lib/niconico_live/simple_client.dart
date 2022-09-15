@@ -262,7 +262,7 @@ class NiconicoLiveSimpleClient {
     rooms.add(Room(roomMessage: roomMessage, commentClient: commentClient));
   }
 
-  BaseChatMessage __parseChatMessage(ChatMessage chatMessage) {
+  BaseChatMessage parseChatMessage(ChatMessage chatMessage) {
     final comment = chatMessage.content;
     if (
       chatMessage.premium == null || // 一般会員
@@ -372,7 +372,7 @@ class NiconicoLiveSimpleClient {
   }
 
   void __onChatMessage(ChatMessage chatMessage) {
-    final parsedChatMessage = __parseChatMessage(chatMessage);
+    final parsedChatMessage = parseChatMessage(chatMessage);
     onChatMessage?.call(parsedChatMessage);
   }
 
