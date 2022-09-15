@@ -13,3 +13,4 @@ export 'user_icon_server_emulator.dart';
 export 'models.dart';
 export 'simple_client.dart';
 export 'simple_server_emulator.dart';
+export 'login_client.dart';

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:provider/provider.dart';
+import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:uguisu/niconico_live/niconico_live.dart';
@@ -24,21 +26,29 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Uguisu',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.lime,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => NiconicoLoginCookieData()),
+      ],
+      child: MaterialApp(
+        title: 'Uguisu',
+        theme: ThemeData(
+          // This is the theme of your application.
+          //
+          // Try running your application with "flutter run". You'll see the
+          // application has a blue toolbar. Then, without quitting the app, try
+          // changing the primarySwatch below to Colors.green and then invoke
+          // "hot reload" (press "r" in the console where you ran "flutter run",
+          // or simply save your changes to "hot reload" in a Flutter IDE).
+          // Notice that the counter didn't reset back to zero; the application
+          // is not restarted.
+          primarySwatch: Colors.lime,
+        ),
+        routes: <String, WidgetBuilder>{
+          '/': (_) => const NiconicoLivePageWidget(title: 'Uguisu Home'),
+          '/login': (_) => const NiconicoLoginWidget(),
+        },
       ),
-      home: const NiconicoLivePageWidget(title: 'Uguisu Home'),
     );
   }
 }
@@ -55,7 +65,305 @@ class NiconicoLivePageWidget extends StatefulWidget {
   State<NiconicoLivePageWidget> createState() => _NiconicoLivePageWidgetState();
 }
 
-class CommentRow {
+class NiconicoLoginCookieData with ChangeNotifier {
+  SweetCookieJar? cookieJar;
+
+  void setCookieJar(SweetCookieJar? cookieJar) {
+    this.cookieJar = cookieJar;
+    notifyListeners();
+  }
+}
+
+class NiconicoLoginResultData with ChangeNotifier {
+  NiconicoLoginResult? loginResult;
+
+  void setLoginResult(NiconicoLoginResult? loginResult) {
+    this.loginResult = loginResult;
+    notifyListeners();
+  }
+}
+
+class NiconicoMfaLoginResultData with ChangeNotifier {
+  NiconicoMfaLoginResult? mfaLoginResult;
+
+  void setMfaLoginResult(NiconicoMfaLoginResult? mfaLoginResult) {
+    this.mfaLoginResult = mfaLoginResult;
+    notifyListeners();
+  }
+}
+
+class NiconicoLoginWidget extends StatelessWidget {
+  const NiconicoLoginWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => NiconicoLoginResultData()),
+        ChangeNotifierProvider(create: (context) => NiconicoMfaLoginResultData()),
+      ],
+      child: const NiconicoLoginSwitchWidget(),
+    );
+  }
+}
+
+class NiconicoLoginSwitchWidget extends StatelessWidget {
+  const NiconicoLoginSwitchWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final loginResult = context.watch<NiconicoLoginResultData>().loginResult;
+    final mfaLoginResult = context.watch<NiconicoMfaLoginResultData>().mfaLoginResult;
+
+    if (loginResult == null) {
+      return const NiconicoNormalLoginWidget();
+    }
+
+    if (mfaLoginResult == null) {
+      return const NiconicoMfaLoginWidget();
+    }
+
+    Navigator.popUntil(context, ModalRoute.withName('/'));
+
+    return Column();
+  }
+}
+
+class NiconicoNormalLoginWidget extends StatefulWidget {
+  const NiconicoNormalLoginWidget({super.key});
+
+  @override
+  State<NiconicoNormalLoginWidget> createState() => _NiconicoNormalLoginWidgetState();
+}
+
+class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
+  final mailTelTextController = TextEditingController(text: '');
+  final passwordTextController = TextEditingController(text: '');
+
+  Logger? logger;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final logger = Logger('_NiconicoNormalLoginWidgetState');
+    this.logger = logger;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('ニコニコ動画アカウントにログイン', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
+            ),
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: TextField(
+                controller: mailTelTextController,
+                style: const TextStyle(fontSize: 12.0),
+                enabled: true,
+                maxLines: 1,
+                decoration: const InputDecoration(
+                  labelText: 'メールアドレスまたは電話番号',
+                  contentPadding: EdgeInsets.all(4.0),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: TextField(
+                controller: passwordTextController,
+                style: const TextStyle(fontSize: 12.0),
+                enabled: true,
+                maxLines: 1,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'パスワード',
+                  contentPadding: EdgeInsets.all(4.0),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Text('キャンセル', style: TextStyle(fontSize: 16.0)),
+                    ),
+                    onPressed: () async {
+                      mailTelTextController.clear();
+                      passwordTextController.clear();
+
+                      Navigator.popUntil(context, ModalRoute.withName('/'));
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Text('ログイン', style: TextStyle(fontSize: 16.0)),
+                    ),
+                    onPressed: () async {
+                      const userAgent = 'uguisu/0.0.0';
+                      final mailTel = mailTelTextController.text;
+                      final password = passwordTextController.text;
+
+                      final loginResult = await NiconicoLoginClient().login(
+                        uri: Uri.parse('https://account.nicovideo.jp/login/redirector'),
+                        mailTel: mailTel,
+                        password: password,
+                        userAgent: userAgent,
+                      );
+
+                      if (mounted) {
+                        context.read<NiconicoLoginResultData>().setLoginResult(loginResult);
+
+                        if (! loginResult.mfaRequired) {
+                          context.read<NiconicoLoginCookieData>().setCookieJar(loginResult.cookieJar);
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NiconicoMfaLoginWidget extends StatefulWidget {
+  const NiconicoMfaLoginWidget({
+    super.key,
+  });
+
+  @override
+  State<NiconicoMfaLoginWidget> createState() => _NiconicoMfaLoginWidgetState();
+}
+
+class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
+  final otpTextController = TextEditingController(text: '');
+  final deviceNameTextController = TextEditingController(text: 'Uguisu');
+
+  Logger? logger;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final logger = Logger('main');
+    this.logger = logger;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loginResult = context.watch<NiconicoLoginResultData>().loginResult;
+
+    return Scaffold(
+      body: loginResult == null ? Column() : Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('確認コードの入力', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
+            ),
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: TextField(
+                controller: otpTextController,
+                style: const TextStyle(fontSize: 12.0),
+                enabled: true,
+                maxLines: 1,
+                decoration: const InputDecoration(
+                  labelText: '確認コード',
+                  contentPadding: EdgeInsets.all(4.0),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: TextField(
+                controller: deviceNameTextController,
+                style: const TextStyle(fontSize: 12.0),
+                enabled: true,
+                maxLines: 1,
+                decoration: const InputDecoration(
+                  labelText: 'デバイス名',
+                  contentPadding: EdgeInsets.all(4.0),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Text('キャンセル', style: TextStyle(fontSize: 16.0)),
+                    ),
+                    onPressed: () {
+                      otpTextController.clear();
+                      deviceNameTextController.clear();
+
+                      context.read<NiconicoLoginResultData>().setLoginResult(null);
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Text('ログイン', style: TextStyle(fontSize: 16.0)),
+                    ),
+                    onPressed: () async {
+                      const userAgent = 'uguisu/0.0.0';
+                      final otp = otpTextController.text;
+                      final deviceName = deviceNameTextController.text;
+
+                      final mfaLoginResult = await NiconicoLoginClient().mfaLogin(
+                        mfaFormActionUri: loginResult.mfaFormActionUri!,
+                        cookieJar: loginResult.cookieJar,
+                        otp: otp,
+                        deviceName: deviceName,
+                        isMfaTrustedDevice: true,
+                        userAgent: userAgent,
+                      );
+
+                      otpTextController.clear();
+                      deviceNameTextController.clear();
+
+                      if (mounted) {
+                        context.read<NiconicoMfaLoginResultData>().setMfaLoginResult(mfaLoginResult);
+                        context.read<NiconicoLoginCookieData>().setCookieJar(mfaLoginResult.cookieJar);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
@@ -69,6 +377,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
   NiconicoLiveSimpleClient? simpleClient;
   final liveIdOrUrlTextController = TextEditingController(text: '');
+
   Logger? logger;
 
   @override
@@ -328,12 +637,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    // TODO: use cookie data for request if not null
+    final loginCookieDdata = context.watch<NiconicoLoginCookieData>();
 
     return Scaffold(
       body: Column(
@@ -391,6 +696,21 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                         setLivePageUrl(livePageUrl: livePageUrl);
                       },
                       child: const Text('Connect'),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) {
+                            return const NiconicoLoginWidget();
+                          },
+                        );
+                      },
+                      child: const Text('Login'),
                     ),
                   ),
                 ],
