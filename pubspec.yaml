@@ -44,6 +44,8 @@ dependencies:
   url_launcher: ^6.1.5
   path_provider: ^2.0.11
   path: ^1.8.2
+  sweet_cookie_jar: ^1.1.0
+  provider: ^6.0.3
 
 dev_dependencies:
   flutter_test:

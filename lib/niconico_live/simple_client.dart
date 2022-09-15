@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
+import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 import 'package:uguisu/niconico_live/user_page_cache_client.dart';
 import 'live_page_client.dart';
 import 'watch_client.dart';
@@ -154,6 +155,7 @@ class NiconicoLiveSimpleClient {
   final String userAgent;
 
   String? livePageUrl;
+  SweetCookieJar? cookieJar;
   NiconicoLivePage? livePage;
   NiconicoLiveWatchClient? watchClient;
   NiconicoUserIconCacheClient? userIconCacheClient;
@@ -177,6 +179,7 @@ class NiconicoLiveSimpleClient {
 
   Future<void> connect({
     required String livePageUrl, // https://live.nicovideo.jp/watch/lv000000000
+    SweetCookieJar? cookieJar,
     required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
     required Function(BaseChatMessage chatMessage) onChatMessage,
@@ -187,12 +190,14 @@ class NiconicoLiveSimpleClient {
     required Future<void> Function(NiconicoUserPageCache userPage) userPageSaveCache,
   }) async {
     this.livePageUrl = livePageUrl;
+    this.cookieJar = cookieJar;
     this.onScheduleMessage = onScheduleMessage;
     this.onStatisticsMessage = onStatisticsMessage;
     this.onChatMessage = onChatMessage;
     this.getUserPageUri = getUserPageUri;
 
     NiconicoUserIconCacheClient userIconCacheClient = NiconicoUserIconCacheClient(
+      cookieJar: cookieJar,
       userAgent: userAgent,
       loadCacheOrNull: userIconLoadCacheOrNull,
       saveCache: userIconSaveCache,
@@ -200,13 +205,18 @@ class NiconicoLiveSimpleClient {
     this.userIconCacheClient = userIconCacheClient;
 
     NiconicoUserPageCacheClient userPageCacheClient = NiconicoUserPageCacheClient(
+      cookieJar: cookieJar,
       userAgent: userAgent,
       loadCacheOrNull: userPageLoadCacheOrNull,
       saveCache: userPageSaveCache,
     );
     this.userPageCacheClient = userPageCacheClient;
 
-    NiconicoLivePage livePage = await NiconicoLivePageClient().get(uri: Uri.parse(livePageUrl), userAgent: userAgent);
+    NiconicoLivePage livePage = await NiconicoLivePageClient().get(
+      uri: Uri.parse(livePageUrl),
+      cookieJar: cookieJar,
+      userAgent: userAgent,
+    );
     this.livePage = livePage;
 
     // ケース: 一般会員・非ログイン時の放送終了済み番組に接続した
