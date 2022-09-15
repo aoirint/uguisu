@@ -811,7 +811,20 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 4.0),
-                    child: Text(livePage!.program.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    child: Text.rich(
+                          TextSpan(
+                            text: livePage!.program.title,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                            mouseCursor: SystemMouseCursors.click,
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                final url = livePageUrl!;
+                                if (!await launchUrlString(url)) {
+                                  throw Exception('Failed to open URL: $url');
+                                }
+                              },
+                          ),
+                        ),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
