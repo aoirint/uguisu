@@ -1012,7 +1012,49 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: ElevatedButton(
-                  onPressed: () async {
+                  onPressed: livePage == null ? null : () async {
+                    if (chatMessages.isEmpty) {
+                      logger?.warning('No fetched chat messages');
+                      return;
+                    }
+
+                    final currentTime = DateTime.now();
+                    final liveEndTime = DateTime.fromMillisecondsSinceEpoch(livePage!.program.endTime * 1000);
+
+                    final isTimeshift = currentTime.isAfter(liveEndTime);
+                    final currentLiveTime = isTimeshift ? liveEndTime : currentTime;
+
+                    const windowSize = 200;
+
+                    if (simpleClient!.rooms.isEmpty) {
+                      logger?.warning('No room');
+                      return;
+                    }
+
+                    final room = simpleClient!.rooms[0];
+
+                    // final maxNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no > next.chatMessage.no ? cur : next);
+                    // final maxNo = maxNoChatMessage.chatMessage.no;
+
+                    var minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+                    var minNo = minNoChatMessage.chatMessage.no;
+                    var minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
+
+                    final windowNum = (minNo / windowSize).ceil();
+                    // final windowHeadNoList = List<int>.generate(windowNum, (index) => minNo - windowSize * (index + 1));
+                    for (var windowIndex=0; windowIndex<windowNum; windowIndex+=1) {
+                      // TODO: fetch comment sync
+
+                      minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+                      minNo = minNoChatMessage.chatMessage.no;
+                      minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
+                    }
+
+                    // const firstNo = 1;
+                    // const windowSize = 150;
+                    // final windowNum = ((minNo - firstNo) / windowSize).ceil();
+                    // final windowHeadNoList =List<int>.generate(windowNum, (index) => firstNo + windowSize * index);
+                    // print(windowHeadNoList);
                   },
                   child: const Text('Fetch All'),
                 ),
