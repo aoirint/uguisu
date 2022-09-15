@@ -6,9 +6,11 @@ import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -20,8 +22,36 @@ void main() async {
     print('${record.loggerName}: ${record.level.name}: ${record.time}: ${record.message}');
   });
 
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final sharedPreferences = await SharedPreferences.getInstance();
+
+  if (isDesktopEnvironment()) {
+    await windowManager.ensureInitialized();
+
+    WindowOptions windowOptions = const WindowOptions(
+      // size: Size(1600, 900),
+      // center: true,
+      // backgroundColor: Colors.transparent,
+      // skipTaskbar: false,
+      // titleBarStyle: TitleBarStyle.hidden,
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+
+    final windowOpacityValue = sharedPreferences.getDouble('windowOpacity') ?? 1.0;
+    windowManager.setOpacity(windowOpacityValue);
+  }
+
   final loginCookie = await loadLoginCookie(file: await getLoginCookiePath());
   runApp(MyApp(initialLoginCookie: loginCookie));
+}
+
+bool isDesktopEnvironment() {
+  return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 }
 
 class MyApp extends StatelessWidget {
@@ -57,8 +87,124 @@ class MyApp extends StatelessWidget {
         ),
         routes: <String, WidgetBuilder>{
           '/': (_) => const NiconicoLivePageWidget(title: 'Uguisu Home'),
-          '/login': (_) => const NiconicoLoginWidget(),
+          '/config': (_) => const NiconicoConfigWidget(),
+          '/config/login': (_) => const NiconicoLoginWidget(),
         },
+      ),
+    );
+  }
+}
+
+class NiconicoConfigWidget extends StatefulWidget {
+  const NiconicoConfigWidget({super.key});
+
+  @override
+  State<NiconicoConfigWidget> createState() => _NiconicoConfigWidgetState();
+}
+
+class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
+  double windowOpacityValue = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final loginCookieData = context.watch<NiconicoLoginCookieData>();
+
+    Future(() async {
+      final sharedPreferences = await SharedPreferences.getInstance();
+      setState(() {
+        windowOpacityValue = sharedPreferences.getDouble('windowOpacity') ?? 1.0;
+      });
+    });
+
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(Icons.arrow_back),
+                    ),
+                    onPressed: () async {
+                      Navigator.popUntil(context, ModalRoute.withName('/'));
+                    },
+                  ),
+                ),
+                const Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('設定', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16.0),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('ログイン', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Text('ニコニコ動画'),
+                    ),
+                    onPressed: () async {
+                      Navigator.pushNamed(context, '/config/login');
+                    },
+                  ),
+                  const SizedBox(width: 8.0),
+                  loginCookieData.loginCookie != null ? const Icon(Icons.done) : Column(),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16.0),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('表示', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  const Text('ウインドウの不透明度'),
+                  SizedBox(
+                    width: 200,
+                    child: Slider(
+                      min: 0.25,
+                      max: 1.0,
+                      divisions: 100,
+                      value: windowOpacityValue,
+                      onChanged: (newValue) {
+                        setState(() {
+                          windowOpacityValue = newValue;
+
+                          Future(() async {
+                            final sharedPreferences = await SharedPreferences.getInstance();
+                            sharedPreferences.setDouble('windowOpacity', windowOpacityValue);
+                            windowManager.setOpacity(windowOpacityValue);
+                          });
+                        });
+                      },
+                    ),
+                  ),
+                  Text('${(windowOpacityValue * 100).floor()} %'),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -187,7 +333,7 @@ class NiconicoLoginSwitchWidget extends StatelessWidget {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.popUntil(context, ModalRoute.withName('/'));
+      Navigator.popUntil(context, ModalRoute.withName('/config'));
     });
 
     return Column();
@@ -223,15 +369,32 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text('ニコニコ動画アカウントにログイン', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
+            Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(Icons.arrow_back),
+                    ),
+                    onPressed: () async {
+                      Navigator.popUntil(context, ModalRoute.withName('/config'));
+                    },
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('ニコニコ動画アカウントにログイン', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
+                ),
+              ],
             ),
+            const SizedBox(height: 8.0),
             Padding(
               padding: const EdgeInsets.all(4.0),
               child: TextField(
                 controller: mailTelTextController,
-                style: const TextStyle(fontSize: 12.0),
+                style: const TextStyle(fontSize: 16.0),
                 enabled: true,
                 maxLines: 1,
                 decoration: const InputDecoration(
@@ -244,7 +407,7 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
               padding: const EdgeInsets.all(4.0),
               child: TextField(
                 controller: passwordTextController,
-                style: const TextStyle(fontSize: 12.0),
+                style: const TextStyle(fontSize: 16.0),
                 enabled: true,
                 maxLines: 1,
                 obscureText: true,
@@ -254,24 +417,10 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
                 ),
               ),
             ),
+            const SizedBox(height: 8.0),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Text('キャンセル', style: TextStyle(fontSize: 16.0)),
-                    ),
-                    onPressed: () async {
-                      mailTelTextController.clear();
-                      passwordTextController.clear();
-
-                      Navigator.popUntil(context, ModalRoute.withName('/'));
-                    },
-                  ),
-                ),
                 Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: ElevatedButton(
@@ -345,15 +494,35 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text('確認コードの入力', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
+            Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(Icons.arrow_back),
+                    ),
+                    onPressed: () async {
+                      otpTextController.clear();
+                      deviceNameTextController.clear();
+
+                      context.read<NiconicoLoginResultData>().setLoginResult(null);
+                    },
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('確認コードの入力', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
+                ),
+              ],
             ),
+            const SizedBox(height: 8.0),
             Padding(
               padding: const EdgeInsets.all(4.0),
               child: TextField(
                 controller: otpTextController,
-                style: const TextStyle(fontSize: 12.0),
+                style: const TextStyle(fontSize: 16.0),
                 enabled: true,
                 maxLines: 1,
                 decoration: const InputDecoration(
@@ -366,7 +535,7 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
               padding: const EdgeInsets.all(4.0),
               child: TextField(
                 controller: deviceNameTextController,
-                style: const TextStyle(fontSize: 12.0),
+                style: const TextStyle(fontSize: 16.0),
                 enabled: true,
                 maxLines: 1,
                 decoration: const InputDecoration(
@@ -375,24 +544,10 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
                 ),
               ),
             ),
+            const SizedBox(height: 8.0),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Text('キャンセル', style: TextStyle(fontSize: 16.0)),
-                    ),
-                    onPressed: () {
-                      otpTextController.clear();
-                      deviceNameTextController.clear();
-
-                      context.read<NiconicoLoginResultData>().setLoginResult(null);
-                    },
-                  ),
-                ),
                 Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: ElevatedButton(
@@ -793,9 +948,9 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                     padding: const EdgeInsets.all(8.0),
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/login');
+                        Navigator.pushNamed(context, '/config');
                       },
-                      child: const Text('Login'),
+                      child: const Text('Config'),
                     ),
                   ),
                 ],
