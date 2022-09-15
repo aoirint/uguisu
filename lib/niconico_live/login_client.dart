@@ -8,11 +8,13 @@ import 'package:uguisu/niconico_live/cookie_util.dart';
 
 class NiconicoLoginResult {
   SweetCookieJar cookieJar;
+  String? userId;
   bool mfaRequired;
   Uri? mfaFormActionUri;
 
   NiconicoLoginResult({
     required this.cookieJar,
+    this.userId,
     required this.mfaRequired,
     this.mfaFormActionUri,
   });
@@ -20,9 +22,11 @@ class NiconicoLoginResult {
 
 class NiconicoMfaLoginResult {
   SweetCookieJar cookieJar;
+  String userId;
 
   NiconicoMfaLoginResult({
     required this.cookieJar,
+    required this.userId,
   });
 }
 
@@ -95,12 +99,26 @@ class NiconicoLoginClient {
         throw Exception('URL origin must be the same between the redirected uri and the mfa form action uri for security reason');
       }
 
-      return NiconicoLoginResult(cookieJar: cookieJar, mfaRequired: true, mfaFormActionUri: mfaFormActionUri);
+      return NiconicoLoginResult(cookieJar: cookieJar, userId: null, mfaRequired: true, mfaFormActionUri: mfaFormActionUri);
     }
 
     if (redirectedToUri.path == '/') {
       // ログイン成功
-      return NiconicoLoginResult(cookieJar: cookieJar, mfaRequired: false);
+      // x-niconico-id from /
+      final redirectedRequestHeaders = {'user-agent': userAgent};
+      redirectedRequestHeaders['cookie'] = formatCookieJarForRequestHeader(cookieJar);
+
+      final redirectedResponse = await http.get(redirectedToUri, headers: redirectedRequestHeaders);
+      if (redirectedResponse.statusCode != 200) {
+        throw Exception('Redirected request failed. Status ${redirectedResponse.statusCode}');
+      }
+
+      var userId = redirectedResponse.headers['x-niconico-id'];
+      if (userId == null) {
+        throw Exception('Redirected response does not contains x-niconico-id header');
+      }
+
+      return NiconicoLoginResult(cookieJar: cookieJar, userId: userId, mfaRequired: false);
     }
 
     throw Exception('Unexpected login response. Login failed.');
@@ -158,19 +176,19 @@ class NiconicoLoginClient {
 
     final mfaResponseCookieJar = SweetCookieJar.from(response: mfaResponse);
 
-    final location = mfaResponse.headers['location'];
-    if (location == null) {
+    final mfaLocation = mfaResponse.headers['location'];
+    if (mfaLocation == null) {
       throw Exception('Location header must be defined');
     }
 
-    final redirectedToUri = Uri.parse(location);
-    if (redirectedToUri.origin != mfaFormActionUri.origin) {
+    final mfaRedirectedToUri = Uri.parse(mfaLocation);
+    if (mfaRedirectedToUri.origin != mfaFormActionUri.origin) {
       throw Exception('URL origin must be the same between the redirection for security reason');
     }
 
-    final redirectedToUriParams = redirectedToUri.queryParameters;
-    if (redirectedToUriParams.containsKey('error-code')) {
-      final errorCode = redirectedToUriParams['error-code'];
+    final mfaRedirectedToUriParams = mfaRedirectedToUri.queryParameters;
+    if (mfaRedirectedToUriParams.containsKey('error-code')) {
+      final errorCode = mfaRedirectedToUriParams['error-code'];
       if (errorCode == 'MFA_SESSION_EXPIRED') {
         // 15分間のセッション切れ
         throw Exception('MFA failed by error code: $errorCode');
@@ -180,7 +198,7 @@ class NiconicoLoginClient {
     }
 
     // user_session, user_session_secure from /login/mfa/callback
-    final mfaCallbackRequest = http.Request('GET', redirectedToUri);
+    final mfaCallbackRequest = http.Request('GET', mfaRedirectedToUri);
     mfaCallbackRequest.headers.addAll({
       'user-agent': userAgent,
       'cookie': formatCookieJarForRequestHeader(cookieJar + mfaResponseCookieJar),
@@ -196,8 +214,31 @@ class NiconicoLoginClient {
       throw Exception('MFA callback failed. Status ${mfaCallbackResponse.statusCode}');
     }
 
+    // ログイン成功
+    // x-niconico-id from /
+    final mfaCallbackLocation = mfaCallbackResponse.headers['location'];
+    if (mfaCallbackLocation == null) {
+      throw Exception('Location header must be defined');
+    }
+
+    final mfaCallbackRedirectedToUri = Uri.parse(mfaCallbackLocation);
+    // TODO: check redirection to uri origin
+
+    final mfaCallbackRedirectedRequestHeaders = {'user-agent': userAgent};
+    mfaCallbackRedirectedRequestHeaders['cookie'] = formatCookieJarForRequestHeader(cookieJar + mfaResponseCookieJar + mfaCallbackResponseCookieJar);
+
+    final mfaCallbackRedirectedResponse = await http.get(mfaCallbackRedirectedToUri, headers: mfaCallbackRedirectedRequestHeaders);
+    if (mfaCallbackRedirectedResponse.statusCode != 200) {
+      throw Exception('MFA callback redirected request failed. Status ${mfaCallbackRedirectedResponse.statusCode}');
+    }
+
+    var userId = mfaCallbackRedirectedResponse.headers['x-niconico-id'];
+    if (userId == null) {
+      throw Exception('MFA callback redirected response does not contains x-niconico-id header');
+    }
+
     // TODO: normalize cookies
-    return NiconicoMfaLoginResult(cookieJar: cookieJar + mfaResponseCookieJar + mfaCallbackResponseCookieJar);
+    return NiconicoMfaLoginResult(cookieJar: cookieJar + mfaResponseCookieJar + mfaCallbackResponseCookieJar, userId: userId);
     // return NiconicoMfaLoginResult(cookieJar: responseCookieJar);
   }
 

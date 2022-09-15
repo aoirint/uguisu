@@ -20,16 +20,16 @@ void main() async {
     print('${record.loggerName}: ${record.level.name}: ${record.time}: ${record.message}');
   });
 
-  final cookieJar = await loadCookieJar(file: await getCookieJarPath());
-  runApp(MyApp(initialCookieJar: cookieJar));
+  final loginCookie = await loadLoginCookie(file: await getLoginCookiePath());
+  runApp(MyApp(initialLoginCookie: loginCookie));
 }
 
 class MyApp extends StatelessWidget {
-  final SweetCookieJar? initialCookieJar;
+  final NiconicoLoginCookie? initialLoginCookie;
 
   const MyApp({
     super.key,
-    this.initialCookieJar,
+    this.initialLoginCookie,
   });
 
   // This widget is the root of your application.
@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (context) => NiconicoLoginCookieData(cookieJar: initialCookieJar),
+          create: (context) => NiconicoLoginCookieData(loginCookie: initialLoginCookie),
         ),
       ],
       child: MaterialApp(
@@ -64,56 +64,75 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<File> getCookieJarPath() async {
+Future<File> getLoginCookiePath() async {
   final appSupportDir = await getApplicationSupportDirectory();
-  return File(path.join(appSupportDir.path, 'cookies.json'));
+  return File(path.join(appSupportDir.path, 'login_cookie.json'));
 }
 
-Future<SweetCookieJar?> loadCookieJar({
+Future<NiconicoLoginCookie?> loadLoginCookie({
   required File file,
 }) async {
   if (! file.existsSync()) {
     return null;
   }
 
-  final cookiesRawJson = await file.readAsString(encoding: utf8);
-  final cookiesJson = jsonDecode(cookiesRawJson);
+  final rawJson = await file.readAsString(encoding: utf8);
+  final json = jsonDecode(rawJson);
 
-  if (cookiesJson['version'] != '1') {
+  if (json['version'] != '1') {
     mainLogger.warning('Unsupported cookies json version. Ignore this: ${file.path}');
     return null;
   }
 
-  final cookiesText = cookiesJson['cookies'];
-
+  final cookiesText = json['cookies'];
   final dummyResponse = Response.bytes(
     [],
     200,
     headers: {'set-cookie': cookiesText},
   );
-  return SweetCookieJar.from(response: dummyResponse);
+  final cookieJar = SweetCookieJar.from(response: dummyResponse);
+
+  final userId = json['userId'];
+
+  return NiconicoLoginCookie(
+    cookieJar: cookieJar,
+    userId: userId,
+  );
 }
 
-Future<void> saveCookieJar({
-  required SweetCookieJar cookieJar,
+Future<void> saveLoginCookie({
+  required NiconicoLoginCookie loginCookie,
   required File file,
 }) async {
-  final cookiesText = cookieJar.rawData;
-  final cookiesRawJson = jsonEncode({
+  final cookiesText = loginCookie.cookieJar.rawData;
+  final userId = loginCookie.userId;
+
+  final rawJson = jsonEncode({
     'version': '1',
     'cookies': cookiesText,
+    'userId': userId,
   });
 
-  await file.writeAsString(cookiesRawJson, encoding: utf8);
+  await file.writeAsString(rawJson, encoding: utf8);
+}
+
+class NiconicoLoginCookie {
+  final SweetCookieJar cookieJar;
+  final String userId;
+
+  NiconicoLoginCookie({
+    required this.cookieJar,
+    required this.userId,
+  });
 }
 
 class NiconicoLoginCookieData with ChangeNotifier {
-  SweetCookieJar? cookieJar;
+  NiconicoLoginCookie? loginCookie;
 
-  NiconicoLoginCookieData({this.cookieJar});
+  NiconicoLoginCookieData({this.loginCookie});
 
-  void setCookieJar(SweetCookieJar? cookieJar) {
-    this.cookieJar = cookieJar;
+  void setLoginCookie({NiconicoLoginCookie? loginCookie}) {
+    this.loginCookie = loginCookie;
     notifyListeners();
   }
 }
@@ -266,7 +285,7 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
                       final password = passwordTextController.text;
 
                       final loginResult = await NiconicoLoginClient().login(
-                        uri: Uri.parse('https://account.nicovideo.jp/login/redirector'),
+                        uri: Uri.parse('https://account.nicovideo.jp/login/redirector?site=niconico&next_url=%2F'), // site, next_url is required for user-id fetching; redirected to https://www.nicovideo.jp/ after MFA
                         mailTel: mailTel,
                         password: password,
                         userAgent: userAgent,
@@ -276,8 +295,9 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
                         context.read<NiconicoLoginResultData>().setLoginResult(loginResult);
 
                         if (! loginResult.mfaRequired) {
-                          context.read<NiconicoLoginCookieData>().setCookieJar(loginResult.cookieJar);
-                          await saveCookieJar(cookieJar: loginResult.cookieJar, file: await getCookieJarPath());
+                          final loginCookie = NiconicoLoginCookie(cookieJar: loginResult.cookieJar, userId: loginResult.userId!);
+                          context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
+                          await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
                         }
                       }
                     },
@@ -399,8 +419,10 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
 
                       if (mounted) {
                         context.read<NiconicoMfaLoginResultData>().setMfaLoginResult(mfaLoginResult);
-                        context.read<NiconicoLoginCookieData>().setCookieJar(mfaLoginResult.cookieJar);
-                        await saveCookieJar(cookieJar: mfaLoginResult.cookieJar, file: await getCookieJarPath());
+
+                        final loginCookie = NiconicoLoginCookie(cookieJar: mfaLoginResult.cookieJar, userId: mfaLoginResult.userId);
+                        context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
+                        await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
                       }
                     },
                   ),
@@ -754,7 +776,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           return;
                         }
 
-                        setLivePageUrl(livePageUrl: livePageUrl, cookieJar: loginCookieData.cookieJar);
+                        setLivePageUrl(livePageUrl: livePageUrl, cookieJar: loginCookieData.loginCookie!.cookieJar);
                       },
                       child: const Text('Connect'),
                     ),
