@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:collection/collection.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -138,6 +139,136 @@ Future<void> saveLivePage({
       'id': livePage.socialGroup.id,
       'name': livePage.socialGroup.name,
     },
+  });
+
+  await file.parent.create(recursive: true);
+  await file.writeAsString(rawJson, encoding: utf8, flush: true);
+}
+
+// Live Comment
+class NiconicoLiveRoom {
+  final String name;
+  final String thread;
+  final chatMessages = <ChatMessage>[];
+
+  NiconicoLiveRoom({
+    required this.name,
+    required this.thread,
+  });
+}
+
+class NiconicoLiveComment {
+  final String communityId;
+  final String liveId;
+  final List<NiconicoLiveRoom> rooms;
+
+  NiconicoLiveComment({
+    required this.communityId,
+    required this.liveId,
+    required this.rooms,
+  });
+}
+
+Future<File> getLiveCommentCachePath({
+  required String communityId,
+  required String liveId,
+}) async {
+  final appSupportDir = await getApplicationSupportDirectory();
+  return File(path.join(appSupportDir.path, 'cache', 'live_comment', communityId, '$liveId.json'));
+}
+
+Future<NiconicoLiveComment?> loadLiveComment({
+  required File file,
+}) async {
+  if (! file.existsSync()) {
+    return null;
+  }
+
+  final rawJson = await file.readAsString(encoding: utf8);
+  final json = jsonDecode(rawJson);
+
+  if (json['version'] != '1') {
+    mainLogger.warning('Unsupported live comment cache json version. Ignore this: ${file.path}');
+    return null;
+  }
+
+  final communityId = json['communityId'];
+  final liveId = json['liveId'];
+
+  final rawRooms = json['rooms'];
+  final rooms = <NiconicoLiveRoom>[];
+  for (final room in rawRooms) {
+    final roomName = room['name'];
+    final thread = room['thread'];
+    final rawChatMessages = room['chatMessages'];
+    final chatMessages = <ChatMessage>[];
+    for (final chatMessage in rawChatMessages) {
+      chatMessages.add(
+        ChatMessage(
+          anonymity: chatMessage['anonymity'],
+          content: chatMessage['content'],
+          date: chatMessage['date'],
+          dateUsec: chatMessage['dateUsec'],
+          no: chatMessage['no'],
+          premium: chatMessage['premium'],
+          thread: chatMessage['thread'],
+          mail: chatMessage['mail'],
+          userId: chatMessage['userId'],
+          vpos: chatMessage['vpos'],
+        )
+      );
+    }
+
+    rooms.add(
+      NiconicoLiveRoom(
+        name: roomName,
+        thread: thread,
+      )..chatMessages.addAll(chatMessages)
+    );
+  }
+
+  return NiconicoLiveComment(
+    communityId: communityId,
+    liveId: liveId,
+    rooms: rooms,
+  );
+}
+
+Future<void> saveLiveComment({
+  required NiconicoLiveComment liveComment,
+  required File file,
+}) async {
+  final rooms = <Map<String, dynamic>>[];
+  for (final room in liveComment.rooms) {
+    final chatMessages = <Map<String, dynamic>>[];
+    for (final chatMessage in room.chatMessages) {
+      final rawChatMessage = {
+        'content': chatMessage.content,
+        'date': chatMessage.date,
+        'dateUsec': chatMessage.dateUsec,
+        'no': chatMessage.no,
+        'thread': chatMessage.thread,
+        'userId': chatMessage.userId,
+        'vpos': chatMessage.vpos,
+      };
+      if (chatMessage.anonymity != null) rawChatMessage['anonymity'] = chatMessage.anonymity!;
+      if (chatMessage.premium != null) rawChatMessage['premium'] = chatMessage.premium!;
+      if (chatMessage.mail != null) rawChatMessage['mail'] = chatMessage.mail!;
+
+      chatMessages.add(rawChatMessage);
+    }
+    rooms.add({
+      'name': room.name,
+      'thread': room.thread,
+      'chatMessages': chatMessages,
+    });
+  }
+
+  final rawJson = jsonEncode({
+    'version': '1',
+    'communityId': liveComment.communityId,
+    'liveId': liveComment.liveId,
+    'rooms': rooms,
   });
 
   await file.parent.create(recursive: true);
@@ -715,6 +846,55 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     this.logger = logger;
   }
 
+  Future<void> addAllChatMessagesIfNotExists({
+    required Iterable<BaseChatMessage> chatMessages,
+  }) async {
+    final nextChatMessages = this.chatMessages;
+
+    for (final chatMessage in chatMessages) {
+      final found = this.chatMessages.any((other) =>
+        chatMessage.chatMessage.thread == other.chatMessage.thread && 
+        chatMessage.chatMessage.no == other.chatMessage.no
+      );
+      if (found) continue;
+
+      nextChatMessages.add(chatMessage);
+    }
+
+    nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+
+    setState(() {
+      this.chatMessages = nextChatMessages;
+    });
+
+    final rooms = <NiconicoLiveRoom>[];
+    for (final chatMessage in nextChatMessages) {
+      var room = rooms.firstWhereOrNull((room) => room.thread == chatMessage.chatMessage.thread);
+      if (room == null) {
+        final rawRoom = simpleClient!.rooms.firstWhere((other) => other.roomMessage.threadId == chatMessage.chatMessage.thread);
+        room = NiconicoLiveRoom(name: rawRoom.roomMessage.name, thread: rawRoom.roomMessage.threadId);
+        rooms.add(room);
+      }
+
+      room.chatMessages.add(chatMessage.chatMessage);
+    }
+
+    await saveLiveComment(
+      liveComment: NiconicoLiveComment(
+        communityId: livePage!.socialGroup.id,
+        liveId: livePage!.program.nicoliveProgramId,
+        rooms: rooms,
+      ),
+      file: await getLiveCommentCachePath(communityId: livePage!.socialGroup.id, liveId: livePage!.program.nicoliveProgramId)
+    );
+  }
+
+  Future<void> addChatMessageIfNotExists({
+    required BaseChatMessage chatMessage,
+  }) async {
+    await addAllChatMessagesIfNotExists(chatMessages: [chatMessage]);
+  }
+
   String? __createLivePageUrl({
     required String livePageIdOrUrl,
   }) {
@@ -787,8 +967,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               }
 
               setState(() {
-                chatMessages.add(cm);
-                chatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+                addChatMessageIfNotExists(chatMessage: cm);
               });
             });
           },
@@ -939,6 +1118,26 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           this.livePageSupplierUserPageCache = livePageSupplierUserPageCache;
           this.livePageSupplierUserIconCache = livePageSupplierUserIconCache;
         });
+
+        final liveComment = await loadLiveComment(
+          file: await getLiveCommentCachePath(
+            communityId: simpleClient.livePage!.socialGroup.id,
+            liveId: simpleClient.livePage!.program.nicoliveProgramId,
+          ),
+        );
+        if (liveComment != null) {
+          final chatMessages = <BaseChatMessage>[];
+          for (final room in liveComment.rooms) {
+            for (final chatMessage in room.chatMessages) {
+              var cm = simpleClient.parseChatMessage(chatMessage);
+              if (cm is LazyNormalChatMessage) {
+                cm = await cm.resolve();
+              }
+              chatMessages.add(cm);
+            }
+          }
+          await addAllChatMessagesIfNotExists(chatMessages: chatMessages);
+        }
       } on NoWatchWebSocketUrlFoundException {
         await showDialog(
           context: context,
@@ -1341,10 +1540,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       await Future.delayed(const Duration(milliseconds: 100));
                     }
 
-                    setState(() {
-                      chatMessages.addAll(newChatMessages);
-                      chatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
-                    });
+                    await addAllChatMessagesIfNotExists(chatMessages: newChatMessages);
 
                     // const firstNo = 1;
                     // const windowSize = 150;

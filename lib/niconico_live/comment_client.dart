@@ -171,6 +171,7 @@ class NiconicoLiveCommentClient {
     }
 
     if (message.containsKey('thread')) {
+      // TODO: parse room
     }
 
     if (message.containsKey('chat')) {
@@ -184,6 +185,7 @@ class NiconicoLiveCommentClient {
         no: chat['no'],
         premium: chat['premium'],
         thread: chat['thread'],
+        mail: chat['mail'],
         userId: chat['user_id'],
         vpos: chat['vpos'],
       ));
