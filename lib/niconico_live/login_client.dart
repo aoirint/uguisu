@@ -70,9 +70,9 @@ class NiconicoLoginClient {
     }
 
     final redirectedToUri = Uri.parse(location);
-    if (redirectedToUri.origin != uri.origin) {
-      throw Exception('URL origin must be the same between the redirection for security reason');
-    }
+    // if (redirectedToUri.origin != uri.origin) {
+    //   throw Exception('URL origin must be the same between the redirection for security reason');
+    // }
 
     if (redirectedToUri.path == '/mfa') {
       // 確認コード
