@@ -328,7 +328,7 @@ class NiconicoLoginSwitchWidget extends StatelessWidget {
       return const NiconicoNormalLoginWidget();
     }
 
-    if (mfaLoginResult == null) {
+    if (loginResult.mfaRequired && mfaLoginResult == null) {
       return const NiconicoMfaLoginWidget();
     }
 
