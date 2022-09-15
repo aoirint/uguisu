@@ -53,18 +53,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class NiconicoLivePageWidget extends StatefulWidget {
-  const NiconicoLivePageWidget({
-    super.key,
-    required this.title,
-  });
-
-  final String title;
-
-  @override
-  State<NiconicoLivePageWidget> createState() => _NiconicoLivePageWidgetState();
-}
-
 class NiconicoLoginCookieData with ChangeNotifier {
   SweetCookieJar? cookieJar;
 
@@ -366,6 +354,18 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
       ),
     );
   }
+}
+
+class NiconicoLivePageWidget extends StatefulWidget {
+  const NiconicoLivePageWidget({
+    super.key,
+    required this.title,
+  });
+
+  final String title;
+
+  @override
+  State<NiconicoLivePageWidget> createState() => _NiconicoLivePageWidgetState();
 }
 
 class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
