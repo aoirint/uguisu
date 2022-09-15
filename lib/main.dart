@@ -20,16 +20,16 @@ void main() async {
     print('${record.loggerName}: ${record.level.name}: ${record.time}: ${record.message}');
   });
 
-  final cookieJar = await loadCookieJar(file: await getCookieJarPath());
-  runApp(MyApp(initialCookieJar: cookieJar));
+  final loginCookieData = await loadLoginCookieData(file: await getLoginCookieDataPath());
+  runApp(MyApp(initialLoginCookieData: loginCookieData));
 }
 
 class MyApp extends StatelessWidget {
-  final SweetCookieJar? initialCookieJar;
+  final NiconicoLoginCookieData? initialLoginCookieData;
 
   const MyApp({
     super.key,
-    this.initialCookieJar,
+    this.initialLoginCookieData,
   });
 
   // This widget is the root of your application.
@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (context) => NiconicoLoginCookieData(cookieJar: initialCookieJar),
+          create: (context) => initialLoginCookieData,
         ),
       ],
       child: MaterialApp(
@@ -64,56 +64,70 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<File> getCookieJarPath() async {
+Future<File> getLoginCookieDataPath() async {
   final appSupportDir = await getApplicationSupportDirectory();
-  return File(path.join(appSupportDir.path, 'cookies.json'));
+  return File(path.join(appSupportDir.path, 'login_cookie_data.json'));
 }
 
-Future<SweetCookieJar?> loadCookieJar({
+Future<NiconicoLoginCookieData?> loadLoginCookieData({
   required File file,
 }) async {
   if (! file.existsSync()) {
     return null;
   }
 
-  final cookiesRawJson = await file.readAsString(encoding: utf8);
-  final cookiesJson = jsonDecode(cookiesRawJson);
+  final rawJson = await file.readAsString(encoding: utf8);
+  final json = jsonDecode(rawJson);
 
-  if (cookiesJson['version'] != '1') {
+  if (json['version'] != '1') {
     mainLogger.warning('Unsupported cookies json version. Ignore this: ${file.path}');
     return null;
   }
 
-  final cookiesText = cookiesJson['cookies'];
-
+  final cookiesText = json['cookies'];
   final dummyResponse = Response.bytes(
     [],
     200,
     headers: {'set-cookie': cookiesText},
   );
-  return SweetCookieJar.from(response: dummyResponse);
+  final cookieJar = SweetCookieJar.from(response: dummyResponse);
+
+  final userId = json['userId'];
+
+  return NiconicoLoginCookieData(
+    cookieJar: cookieJar,
+    userId: userId,
+  );
 }
 
-Future<void> saveCookieJar({
-  required SweetCookieJar cookieJar,
+Future<void> saveLoginCookieData({
+  required NiconicoLoginCookieData loginCookieData,
   required File file,
 }) async {
-  final cookiesText = cookieJar.rawData;
-  final cookiesRawJson = jsonEncode({
+  final cookiesText = loginCookieData.cookieJar!.rawData;
+  final userId = loginCookieData.userId!;
+
+  final rawJson = jsonEncode({
     'version': '1',
     'cookies': cookiesText,
+    'userId': userId,
   });
 
-  await file.writeAsString(cookiesRawJson, encoding: utf8);
+  await file.writeAsString(rawJson, encoding: utf8);
 }
 
 class NiconicoLoginCookieData with ChangeNotifier {
   SweetCookieJar? cookieJar;
+  String? userId;
 
-  NiconicoLoginCookieData({this.cookieJar});
+  NiconicoLoginCookieData({this.cookieJar, this.userId});
 
-  void setCookieJar(SweetCookieJar? cookieJar) {
+  void setLoginCookieData({
+    SweetCookieJar? cookieJar,
+    String? userId,
+  }) {
     this.cookieJar = cookieJar;
+    this.userId = userId;
     notifyListeners();
   }
 }
@@ -276,8 +290,9 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
                         context.read<NiconicoLoginResultData>().setLoginResult(loginResult);
 
                         if (! loginResult.mfaRequired) {
-                          context.read<NiconicoLoginCookieData>().setCookieJar(loginResult.cookieJar);
-                          await saveCookieJar(cookieJar: loginResult.cookieJar, file: await getCookieJarPath());
+                          final loginCookieData = context.read<NiconicoLoginCookieData>();
+                          loginCookieData.setLoginCookieData(cookieJar: loginResult.cookieJar, userId: loginResult.userId);
+                          await saveLoginCookieData(loginCookieData: loginCookieData, file: await getLoginCookieDataPath());
                         }
                       }
                     },
@@ -399,8 +414,10 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
 
                       if (mounted) {
                         context.read<NiconicoMfaLoginResultData>().setMfaLoginResult(mfaLoginResult);
-                        context.read<NiconicoLoginCookieData>().setCookieJar(mfaLoginResult.cookieJar);
-                        await saveCookieJar(cookieJar: mfaLoginResult.cookieJar, file: await getCookieJarPath());
+
+                        final loginCookieData = context.read<NiconicoLoginCookieData>();
+                        loginCookieData.setLoginCookieData(cookieJar: mfaLoginResult.cookieJar, userId: mfaLoginResult.userId);
+                        await saveLoginCookieData(loginCookieData: loginCookieData, file: await getLoginCookieDataPath());
                       }
                     },
                   ),
