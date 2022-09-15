@@ -123,7 +123,9 @@ class NiconicoLoginSwitchWidget extends StatelessWidget {
       return const NiconicoMfaLoginWidget();
     }
 
-    Navigator.popUntil(context, ModalRoute.withName('/'));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.popUntil(context, ModalRoute.withName('/'));
+    });
 
     return Column();
   }
@@ -702,13 +704,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                     padding: const EdgeInsets.all(8.0),
                     child: ElevatedButton(
                       onPressed: () {
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) {
-                            return const NiconicoLoginWidget();
-                          },
-                        );
+                        Navigator.pushNamed(context, '/login');
                       },
                       child: const Text('Login'),
                     ),
