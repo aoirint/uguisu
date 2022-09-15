@@ -88,15 +88,19 @@ class NiconicoLiveCommentClient {
       'with_global': 1,
     };
 
-    if (threadkey != null) {threadObj['threadkey'] = threadkey; }
+    if (threadkey != null) {
+      threadObj['threadkey'] = threadkey;
+    }
 
-    client!.add(jsonEncode([
+    client.add(jsonEncode([
       { 'ping': { 'content': 'rs:0' } },
       { 'ping': { 'content': 'ps:0' } },
       { 'thread': threadObj },
       { 'ping': { 'content': 'pf:0' } },
       { 'ping': { 'content': 'rf:0' } },
     ]));
+
+    this.client = client;
 
     final pingTimingReceivePort = ReceivePort();
     pingTimingReceivePort.listen((message) {
