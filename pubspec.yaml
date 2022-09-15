@@ -47,6 +47,7 @@ dependencies:
   sweet_cookie_jar: ^1.1.0
   provider: ^6.0.3
   window_manager: ^0.2.7
+  shared_preferences: ^2.0.15
 
 dev_dependencies:
   flutter_test:
