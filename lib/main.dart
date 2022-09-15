@@ -54,6 +54,96 @@ bool isDesktopEnvironment() {
   return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 }
 
+// Live Page
+Future<File> getLivePageCachePath({
+  required String communityId,
+  required String liveId,
+}) async {
+  final appSupportDir = await getApplicationSupportDirectory();
+  return File(path.join(appSupportDir.path, 'cache', 'live_page', communityId, '$liveId.json'));
+}
+
+Future<NiconicoLivePage?> loadLivePage({
+  required File file,
+}) async {
+  if (! file.existsSync()) {
+    return null;
+  }
+
+  final rawJson = await file.readAsString(encoding: utf8);
+  final json = jsonDecode(rawJson);
+
+  if (json['version'] != '1') {
+    mainLogger.warning('Unsupported live page cache json version. Ignore this: ${file.path}');
+    return null;
+  }
+
+  final webSocketUrl = json['webSocketUrl'];
+
+  final program = json['program'];
+  final programTitle = program['title'];
+  final programNicoliveProgramId = program['nicoliveProgramId'];
+  final programProviderType = program['providerType'];
+  final programVisualProviderType = program['visualProviderType'];
+
+  final programSupplier = program['supplier'];
+  final programSupplierName = programSupplier['name'];
+  final programSupplierProgramProviderId = programSupplier['programProviderId'];
+
+  final programBeginTime = program['beginTime'];
+  final programEndTime = program['endTime'];
+
+  final socialGroup = json['socialGroup'];
+  final socialGroupId = socialGroup['id'];
+  final socialGroupName = socialGroup['name'];
+
+  return NiconicoLivePage(
+    webSocketUrl: webSocketUrl,
+    program: NiconicoLivePageProgram(
+      title: programTitle,
+      nicoliveProgramId: programNicoliveProgramId,
+      providerType: programProviderType,
+      visualProviderType: programVisualProviderType,
+      supplier: NiconicoLivePageProgramSupplier(
+        name: programSupplierName,
+        programProviderId: programSupplierProgramProviderId,
+      ),
+      beginTime: programBeginTime,
+      endTime: programEndTime,
+    ),
+    socialGroup: NiconicoLivePageSocialGroup(
+      id: socialGroupId,
+      name: socialGroupName,
+    ),
+  );
+}
+
+Future<void> saveLivePage({
+  required NiconicoLivePage livePage,
+  required File file,
+}) async {
+  final rawJson = jsonEncode({
+    'version': '1',
+    'webSocketUrl': livePage.webSocketUrl,
+    'program': {
+      'title': livePage.program.title,
+      'supplier': {
+        'name': livePage.program.supplier.name,
+        'programProviderId': livePage.program.supplier.programProviderId,
+      },
+      'beginTime': livePage.program.beginTime,
+      'endTime': livePage.program.endTime,
+    },
+    'socialGroup': {
+      'id': livePage.socialGroup.id,
+      'name': livePage.socialGroup.name,
+    },
+  });
+
+  await file.parent.create(recursive: true);
+  await file.writeAsString(rawJson, encoding: utf8, flush: true);
+}
+
 class MyApp extends StatelessWidget {
   final NiconicoLoginCookie? initialLoginCookie;
 
@@ -835,6 +925,14 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         final liveUserId = int.parse(simpleClient.livePage!.program.supplier.programProviderId);
         final livePageSupplierUserPageCache = await simpleClient.userPageCacheClient!.loadOrFetchUserPage(userId: liveUserId, userPageUri: await getUserPageUri(liveUserId));
         final livePageSupplierUserIconCache = await simpleClient.userIconCacheClient!.loadOrFetchIcon(userId: liveUserId, iconUri: Uri.parse(livePageSupplierUserPageCache.userPage.iconUrl));
+
+        await saveLivePage(
+          livePage: simpleClient.livePage!,
+          file: await getLivePageCachePath(
+            communityId: simpleClient.livePage!.socialGroup.id,
+            liveId: simpleClient.livePage!.program.nicoliveProgramId,
+          ),
+        );
 
         setState(() {
           livePage = simpleClient.livePage;

@@ -28,12 +28,18 @@ class NiconicoLivePageProgramSupplier {
 
 class NiconicoLivePageProgram {
   String title;
+  String nicoliveProgramId;
+  String providerType;
+  String visualProviderType;
   NiconicoLivePageProgramSupplier supplier;
   int beginTime; // unix epoch (UTC, seconds)
   int endTime; // unix epoch (UTC, seconds)
 
   NiconicoLivePageProgram({
     required this.title,
+    required this.nicoliveProgramId,
+    required this.providerType,
+    required this.visualProviderType,
     required this.supplier,
     required this.beginTime,
     required this.endTime,
@@ -92,6 +98,9 @@ class NiconicoLivePageClient {
 
     final program = props['program'];
     final programTitle = program['title'];
+    final programNicoliveProgramId = program['nicoliveProgramId'];
+    final programProviderType = program['providerType'];
+    final programVisualProviderType = program['visualProviderType'];
     final programBeginTime = program['beginTime'];
     final programEndTime = program['endTime'];
 
@@ -107,6 +116,9 @@ class NiconicoLivePageClient {
       webSocketUrl: webSocketUrl,
       program: NiconicoLivePageProgram(
         title: programTitle,
+        nicoliveProgramId: programNicoliveProgramId,
+        providerType: programProviderType,
+        visualProviderType: programVisualProviderType,
         supplier: NiconicoLivePageProgramSupplier(
           name: programSupplierName,
           programProviderId: programSupplierProgramProviderId,
