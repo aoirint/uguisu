@@ -56,6 +56,7 @@ class NiconicoLiveCommentClient {
     required String userAgent,
     required String thread,
     String? threadkey,
+    String? userId,
     required Function(ChatMessage chatMessage) onChatMessage,
   }) async {
     logger.info('connect to $websocketUrl');
@@ -81,7 +82,7 @@ class NiconicoLiveCommentClient {
       'res_from': -150,
       'scores': 1,
       'thread': thread,
-      'user_id': 'guest',
+      'user_id': userId ?? 'guest',
       'version': '20061206',
       'with_global': 1,
     };

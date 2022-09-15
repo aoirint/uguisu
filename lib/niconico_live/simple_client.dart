@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
-import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
+import 'package:uguisu/main.dart';
 import 'package:uguisu/niconico_live/user_page_cache_client.dart';
 import 'live_page_client.dart';
 import 'watch_client.dart';
@@ -155,7 +155,7 @@ class NiconicoLiveSimpleClient {
   final String userAgent;
 
   String? livePageUrl;
-  SweetCookieJar? cookieJar;
+  NiconicoLoginCookie? loginCookie;
   NiconicoLivePage? livePage;
   NiconicoLiveWatchClient? watchClient;
   NiconicoUserIconCacheClient? userIconCacheClient;
@@ -179,7 +179,7 @@ class NiconicoLiveSimpleClient {
 
   Future<void> connect({
     required String livePageUrl, // https://live.nicovideo.jp/watch/lv000000000
-    SweetCookieJar? cookieJar,
+    NiconicoLoginCookie? loginCookie,
     required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
     required Function(BaseChatMessage chatMessage) onChatMessage,
@@ -190,14 +190,14 @@ class NiconicoLiveSimpleClient {
     required Future<void> Function(NiconicoUserPageCache userPage) userPageSaveCache,
   }) async {
     this.livePageUrl = livePageUrl;
-    this.cookieJar = cookieJar;
+    this.loginCookie = loginCookie;
     this.onScheduleMessage = onScheduleMessage;
     this.onStatisticsMessage = onStatisticsMessage;
     this.onChatMessage = onChatMessage;
     this.getUserPageUri = getUserPageUri;
 
     NiconicoUserIconCacheClient userIconCacheClient = NiconicoUserIconCacheClient(
-      cookieJar: cookieJar,
+      cookieJar: loginCookie?.cookieJar,
       userAgent: userAgent,
       loadCacheOrNull: userIconLoadCacheOrNull,
       saveCache: userIconSaveCache,
@@ -205,7 +205,7 @@ class NiconicoLiveSimpleClient {
     this.userIconCacheClient = userIconCacheClient;
 
     NiconicoUserPageCacheClient userPageCacheClient = NiconicoUserPageCacheClient(
-      cookieJar: cookieJar,
+      cookieJar: loginCookie?.cookieJar,
       userAgent: userAgent,
       loadCacheOrNull: userPageLoadCacheOrNull,
       saveCache: userPageSaveCache,
@@ -214,7 +214,7 @@ class NiconicoLiveSimpleClient {
 
     NiconicoLivePage livePage = await NiconicoLivePageClient().get(
       uri: Uri.parse(livePageUrl),
-      cookieJar: cookieJar,
+      cookieJar: loginCookie?.cookieJar,
       userAgent: userAgent,
     );
     this.livePage = livePage;
@@ -255,6 +255,7 @@ class NiconicoLiveSimpleClient {
       userAgent: userAgent,
       thread: thread,
       threadkey: threadkey,
+      userId: loginCookie?.userId,
       onChatMessage: __onChatMessage,
     );
 

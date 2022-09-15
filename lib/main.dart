@@ -492,7 +492,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
   void setLivePageUrl({
     required String livePageUrl,
-    SweetCookieJar? cookieJar,
+    NiconicoLoginCookie? loginCookie,
   }) {
     this.livePageUrl = livePageUrl;
 
@@ -520,7 +520,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       try {
         await simpleClient.connect(
           livePageUrl: livePageUrl,
-          cookieJar: cookieJar,
+          loginCookie: loginCookie,
           onScheduleMessage: (scheduleMessage) {
             setState(() {
               this.scheduleMessage = scheduleMessage;
@@ -776,7 +776,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           return;
                         }
 
-                        setLivePageUrl(livePageUrl: livePageUrl, cookieJar: loginCookieData.loginCookie!.cookieJar);
+                        setLivePageUrl(livePageUrl: livePageUrl, loginCookie: loginCookieData.loginCookie);
                       },
                       child: const Text('Connect'),
                     ),
