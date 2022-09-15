@@ -945,7 +945,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       children: <Widget>[
                         Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
                         icon,
-                        Padding(padding: const EdgeInsets.all(8.0), child: name),
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Padding(padding: const EdgeInsets.all(8.0), child: name)]),
                         Padding(padding: const EdgeInsets.all(8.0), child: commentedAt),
                         Padding(padding: const EdgeInsets.all(8.0), child: content),
                       ],
