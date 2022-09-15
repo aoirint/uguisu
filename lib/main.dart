@@ -1009,6 +1009,14 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton(
+                  onPressed: () async {
+                  },
+                  child: const Text('Fetch All'),
+                ),
+              ),
             ],
           ),
         ],
