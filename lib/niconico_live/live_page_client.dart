@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
 import 'package:logging/logging.dart';
+import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
+import 'package:uguisu/niconico_live/cookie_util.dart';
 
 class NiconicoLivePageSocialGroup {
   String id; // community ID, co0000000
@@ -59,11 +61,13 @@ class NiconicoLivePageClient {
 
   Future<NiconicoLivePage> get({
     required Uri uri,
+    SweetCookieJar? cookieJar,
     required String userAgent,
   }) async {
-    final response = await http.get(uri, headers: {
-      'User-Agent': userAgent,
-    });
+    final headers = {'User-Agent': userAgent};
+    if (cookieJar != null) {headers['Cookie'] = formatCookieJarForRequestHeader(cookieJar);}
+
+    final response = await http.get(uri, headers: headers);
     if (response.statusCode != 200) {
       throw Exception('Request failed. Status ${response.statusCode}');
     }

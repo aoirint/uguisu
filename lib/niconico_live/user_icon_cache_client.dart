@@ -1,3 +1,5 @@
+import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
+
 import 'user_icon_client.dart';
 
 class NiconicoUserIconCache {
@@ -15,11 +17,13 @@ class NiconicoUserIconCache {
 }
 
 class NiconicoUserIconCacheClient {
+  SweetCookieJar? cookieJar;
   String userAgent;
   Future<NiconicoUserIconCache?> Function(int userId) loadCacheOrNull;
   Future<void> Function(NiconicoUserIconCache userIcon) saveCache;
 
   NiconicoUserIconCacheClient({
+    this.cookieJar,
     required this.userAgent,
     required this.loadCacheOrNull,
     required this.saveCache,
@@ -35,7 +39,7 @@ class NiconicoUserIconCacheClient {
     }
 
     final now = DateTime.now();
-    final userIcon = await NiconicoUserIconClient().get(uri: iconUri, userAgent: userAgent);
+    final userIcon = await NiconicoUserIconClient().get(uri: iconUri, cookieJar: cookieJar, userAgent: userAgent);
 
     final uriQuery = iconUri.query; // '?' excluded
     final iconUploadedAt = uriQuery != '' ? DateTime.fromMillisecondsSinceEpoch(int.parse(uriQuery) * 1000, isUtc: true) : null;

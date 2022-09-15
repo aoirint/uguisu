@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,24 +12,34 @@ import 'dart:io';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
-void main() {
+final mainLogger = Logger('main');
+
+void main() async {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) { 
     print('${record.loggerName}: ${record.level.name}: ${record.time}: ${record.message}');
   });
 
-  runApp(const MyApp());
+  final cookieJar = await loadCookieJar(file: await getCookieJarPath());
+  runApp(MyApp(initialCookieJar: cookieJar));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final SweetCookieJar? initialCookieJar;
+
+  const MyApp({
+    super.key,
+    this.initialCookieJar,
+  });
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => NiconicoLoginCookieData()),
+        ChangeNotifierProvider(
+          create: (context) => NiconicoLoginCookieData(cookieJar: initialCookieJar),
+        ),
       ],
       child: MaterialApp(
         title: 'Uguisu',
@@ -53,8 +64,53 @@ class MyApp extends StatelessWidget {
   }
 }
 
+Future<File> getCookieJarPath() async {
+  final appSupportDir = await getApplicationSupportDirectory();
+  return File(path.join(appSupportDir.path, 'cookies.json'));
+}
+
+Future<SweetCookieJar?> loadCookieJar({
+  required File file,
+}) async {
+  if (! file.existsSync()) {
+    return null;
+  }
+
+  final cookiesRawJson = await file.readAsString(encoding: utf8);
+  final cookiesJson = jsonDecode(cookiesRawJson);
+
+  if (cookiesJson['version'] != '1') {
+    mainLogger.warning('Unsupported cookies json version. Ignore this: ${file.path}');
+    return null;
+  }
+
+  final cookiesText = cookiesJson['cookies'];
+
+  final dummyResponse = Response.bytes(
+    [],
+    200,
+    headers: {'set-cookie': cookiesText},
+  );
+  return SweetCookieJar.from(response: dummyResponse);
+}
+
+Future<void> saveCookieJar({
+  required SweetCookieJar cookieJar,
+  required File file,
+}) async {
+  final cookiesText = cookieJar.rawData;
+  final cookiesRawJson = jsonEncode({
+    'version': '1',
+    'cookies': cookiesText,
+  });
+
+  await file.writeAsString(cookiesRawJson, encoding: utf8);
+}
+
 class NiconicoLoginCookieData with ChangeNotifier {
   SweetCookieJar? cookieJar;
+
+  NiconicoLoginCookieData({this.cookieJar});
 
   void setCookieJar(SweetCookieJar? cookieJar) {
     this.cookieJar = cookieJar;
@@ -221,6 +277,7 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
 
                         if (! loginResult.mfaRequired) {
                           context.read<NiconicoLoginCookieData>().setCookieJar(loginResult.cookieJar);
+                          await saveCookieJar(cookieJar: loginResult.cookieJar, file: await getCookieJarPath());
                         }
                       }
                     },
@@ -343,6 +400,7 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
                       if (mounted) {
                         context.read<NiconicoMfaLoginResultData>().setMfaLoginResult(mfaLoginResult);
                         context.read<NiconicoLoginCookieData>().setCookieJar(mfaLoginResult.cookieJar);
+                        await saveCookieJar(cookieJar: mfaLoginResult.cookieJar, file: await getCookieJarPath());
                       }
                     },
                   ),
@@ -412,6 +470,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
   void setLivePageUrl({
     required String livePageUrl,
+    SweetCookieJar? cookieJar,
   }) {
     this.livePageUrl = livePageUrl;
 
@@ -439,6 +498,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       try {
         await simpleClient.connect(
           livePageUrl: livePageUrl,
+          cookieJar: cookieJar,
           onScheduleMessage: (scheduleMessage) {
             setState(() {
               this.scheduleMessage = scheduleMessage;
@@ -639,8 +699,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: use cookie data for request if not null
-    final loginCookieDdata = context.watch<NiconicoLoginCookieData>();
+    final loginCookieData = context.watch<NiconicoLoginCookieData>();
 
     return Scaffold(
       body: Column(
@@ -695,7 +754,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           return;
                         }
 
-                        setLivePageUrl(livePageUrl: livePageUrl);
+                        setLivePageUrl(livePageUrl: livePageUrl, cookieJar: loginCookieData.cookieJar);
                       },
                       child: const Text('Connect'),
                     ),

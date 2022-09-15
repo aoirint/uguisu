@@ -1,3 +1,5 @@
+import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
+
 import 'user_page_client.dart';
 
 class NiconicoUserPageCache {
@@ -13,11 +15,13 @@ class NiconicoUserPageCache {
 }
 
 class NiconicoUserPageCacheClient {
+  SweetCookieJar? cookieJar;
   String userAgent;
   Future<NiconicoUserPageCache?> Function(int userId) loadCacheOrNull;
   Future<void> Function(NiconicoUserPageCache userPage) saveCache;
 
   NiconicoUserPageCacheClient({
+    this.cookieJar,
     required this.userAgent,
     required this.loadCacheOrNull,
     required this.saveCache,
@@ -33,7 +37,7 @@ class NiconicoUserPageCacheClient {
     }
 
     final now = DateTime.now();
-    final userPage = await NiconicoUserPageClient().get(uri: userPageUri, userAgent: userAgent);
+    final userPage = await NiconicoUserPageClient().get(uri: userPageUri, cookieJar: cookieJar, userAgent: userAgent);
 
     final fetchedCache = NiconicoUserPageCache(userId: userId, userPage: userPage, pageFetchedAt: now);
     await saveCache(fetchedCache);

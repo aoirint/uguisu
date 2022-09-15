@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
 import 'package:logging/logging.dart';
 import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
+import 'package:uguisu/niconico_live/cookie_util.dart';
 
 class NiconicoLoginResult {
   SweetCookieJar cookieJar;
@@ -113,32 +114,32 @@ class NiconicoLoginClient {
     required String deviceName,
     required String userAgent,
   }) async {
-    final request = http.Request('POST', mfaFormActionUri);
-    request.headers.addAll({
+    final httpClient = http.Client();
+
+    final mfaRequest = http.Request('POST', mfaFormActionUri);
+    mfaRequest.headers.addAll({
       'user-agent': userAgent,
       'content-type': 'application/x-www-form-urlencoded',
-      'cookie': cookieJar.rawData,
+      'cookie': formatCookieJarForRequestHeader(cookieJar),
     });
-    request.followRedirects = false;
-    request.bodyFields = {
+    mfaRequest.followRedirects = false;
+    mfaRequest.bodyFields = {
       'otp': otp,
       'loginBtn': 'ログイン',
       'is_mfa_trusted_device': isMfaTrustedDevice ? 'true' : 'false',
       'device_name': deviceName,
     };
 
-    final httpClient = http.Client();
+    final mfaStreamedResponse = await httpClient.send(mfaRequest);
+    final mfaResponse = await http.Response.fromStream(mfaStreamedResponse);
 
-    final streamedResponse = await httpClient.send(request);
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode == 200) {
+    if (mfaResponse.statusCode == 200) {
       // 元のページから動かなければ失敗
       // main form .formError
       // - 確認コードは6桁の数字です
       // - 確認コードが間違っています
 
-      final responseBody = response.body;
+      final responseBody = mfaResponse.body;
       final document = parse(responseBody);
       final formErrorElement = document.querySelector('main form .formError');
       if (formErrorElement == null) {
@@ -151,13 +152,13 @@ class NiconicoLoginClient {
     }
 
     // 302 Foundが返ってきてリダイレクト
-    if (response.statusCode != 302) {
-      throw Exception('Request failed. Status ${response.statusCode}');
+    if (mfaResponse.statusCode != 302) {
+      throw Exception('Request failed. Status ${mfaResponse.statusCode}');
     }
 
-    final responseCookieJar = SweetCookieJar.from(response: response);
+    final mfaResponseCookieJar = SweetCookieJar.from(response: mfaResponse);
 
-    final location = response.headers['location'];
+    final location = mfaResponse.headers['location'];
     if (location == null) {
       throw Exception('Location header must be defined');
     }
@@ -178,7 +179,26 @@ class NiconicoLoginClient {
       throw Exception('MFA failed by unknown error code: $errorCode');
     }
 
-    return NiconicoMfaLoginResult(cookieJar: responseCookieJar);
+    // user_session, user_session_secure from /login/mfa/callback
+    final mfaCallbackRequest = http.Request('GET', redirectedToUri);
+    mfaCallbackRequest.headers.addAll({
+      'user-agent': userAgent,
+      'cookie': formatCookieJarForRequestHeader(cookieJar + mfaResponseCookieJar),
+    });
+    mfaCallbackRequest.followRedirects = false;
+
+    final mfaCallbackStreamedResponse = await httpClient.send(mfaCallbackRequest);
+    final mfaCallbackResponse = await http.Response.fromStream(mfaCallbackStreamedResponse);
+
+    final mfaCallbackResponseCookieJar = SweetCookieJar.from(response: mfaCallbackResponse);
+    
+    if (mfaCallbackResponse.statusCode != 302) {
+      throw Exception('MFA callback failed. Status ${mfaCallbackResponse.statusCode}');
+    }
+
+    // TODO: normalize cookies
+    return NiconicoMfaLoginResult(cookieJar: cookieJar + mfaResponseCookieJar + mfaCallbackResponseCookieJar);
+    // return NiconicoMfaLoginResult(cookieJar: responseCookieJar);
   }
 
 }
