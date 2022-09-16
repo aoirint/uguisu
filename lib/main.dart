@@ -1111,7 +1111,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     String? livePageUrl;
 
     // Full URL
-    if (livePageIdOrUrl.startsWith('http')) {
+    // if (livePageIdOrUrl.startsWith('http')) {
+    if (livePageIdOrUrl.startsWith('https://live.nicovideo.jp/')) { // casual blocking unknown urls
       livePageUrl = livePageIdOrUrl;
     }
 
@@ -1302,7 +1303,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                         enabled: true,
                         maxLines: 1,
                         decoration: const InputDecoration(
-                          labelText: 'Niconico Live ID or URL (e.g. lv000000000, https://live.nicovideo.jp/watch/lv000000000)',
+                          labelText: 'ニコニコ生放送 番組ID または URL (例: lv000000000, https://live.nicovideo.jp/watch/lv000000000)',
                           contentPadding: EdgeInsets.all(4.0),
                         ),
                       ),
@@ -1321,7 +1322,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                             builder: (_) {
                               return AlertDialog(
                                 title: const Text('エラー：入力された番組IDまたはURLの形式は非対応です'),
-                                content: const Text('形式が合っているか確認してください。'),
+                                content: const Text('正しい形式で入力されているか確認してください。'),
                                 actions: [
                                   Padding(
                                     padding: const EdgeInsets.all(8.0),
