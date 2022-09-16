@@ -1,3 +1,20 @@
 {
-   "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "aoirint",
+      "id": 27213639,
+      "comment_id": 1248877338,
+      "created_at": "2022-09-16T03:26:57Z",
+      "repoId": 535449490,
+      "pullRequestNo": 56
+    },
+    {
+      "name": "aoirint",
+      "id": 27213639,
+      "comment_id": 1248878891,
+      "created_at": "2022-09-16T03:29:52Z",
+      "repoId": 535449490,
+      "pullRequestNo": 56
+    }
+  ]
 }
