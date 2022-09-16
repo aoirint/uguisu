@@ -47,6 +47,9 @@ void main() async {
 
     final windowOpacityValue = sharedPreferences.getDouble('windowOpacity') ?? 1.0;
     windowManager.setOpacity(windowOpacityValue);
+
+    final alwaysOnTop = sharedPreferences.getBool('alwaysOnTop') ?? false;
+    windowManager.setAlwaysOnTop(alwaysOnTop);
   }
 
   final loginCookie = await loadLoginCookie(file: await getLoginCookiePath());
@@ -527,6 +530,7 @@ class NiconicoConfigWidget extends StatefulWidget {
 
 class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
   double windowOpacityValue = 1.0;
+  bool alwaysOnTopValue = false;
 
   @override
   Widget build(BuildContext context) {
@@ -537,6 +541,7 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
       final sharedPreferences = await SharedPreferences.getInstance();
       setState(() {
         windowOpacityValue = sharedPreferences.getDouble('windowOpacity') ?? 1.0;
+        alwaysOnTopValue = sharedPreferences.getBool('alwaysOnTop') ?? false;
       });
     });
 
@@ -654,6 +659,28 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
                     ),
                   ),
                   Text('${(windowOpacityValue * 100).floor()} %'),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  const Text('常に手前に表示'),
+                  Switch(
+                    value: alwaysOnTopValue,
+                    onChanged: (newValue) {
+                      setState(() {
+                        alwaysOnTopValue = newValue;
+
+                        Future(() async {
+                          final sharedPreferences = await SharedPreferences.getInstance();
+                          sharedPreferences.setBool('alwaysOnTop', alwaysOnTopValue);
+                          windowManager.setAlwaysOnTop(alwaysOnTopValue);
+                        });
+                      });
+                    },
+                  ),
                 ],
               ),
             ),
