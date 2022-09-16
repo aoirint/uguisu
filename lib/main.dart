@@ -20,6 +20,10 @@ final mainLogger = Logger('main');
 NiconicoLiveSimpleClient? simpleClient;
 SharedPreferences? sharedPreferences;
 
+const windowOpacityDefaultValue = 1.0;
+const alwaysOnTopDefaultValue = false;
+const commentTimeFormatElapsedDefaultValue = false;
+
 void main() async {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) { 
@@ -46,10 +50,10 @@ void main() async {
       await windowManager.focus();
     });
 
-    final windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? 1.0;
+    final windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? windowOpacityDefaultValue;
     windowManager.setOpacity(windowOpacityValue);
 
-    final alwaysOnTop = sharedPreferences!.getBool('alwaysOnTop') ?? false;
+    final alwaysOnTop = sharedPreferences!.getBool('alwaysOnTop') ?? alwaysOnTopDefaultValue;
     windowManager.setAlwaysOnTop(alwaysOnTop);
   }
 
@@ -530,9 +534,9 @@ class NiconicoConfigWidget extends StatefulWidget {
 }
 
 class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
-  double windowOpacityValue = 1.0;
-  bool alwaysOnTopValue = false;
-  bool commentTimeFormatElapsedValue = false;
+  double windowOpacityValue = windowOpacityDefaultValue;
+  bool alwaysOnTopValue = alwaysOnTopDefaultValue;
+  bool commentTimeFormatElapsedValue = commentTimeFormatElapsedDefaultValue;
 
   @override
   Widget build(BuildContext context) {
@@ -541,9 +545,9 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
 
     Future(() async {
       setState(() {
-        windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? 1.0;
-        alwaysOnTopValue = sharedPreferences!.getBool('alwaysOnTop') ?? false;
-        commentTimeFormatElapsedValue = sharedPreferences!.getBool('commentTimeFormatElapsed') ?? false;
+        windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? windowOpacityDefaultValue;
+        alwaysOnTopValue = sharedPreferences!.getBool('alwaysOnTop') ?? alwaysOnTopDefaultValue;
+        commentTimeFormatElapsedValue = sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue;
       });
     });
 
@@ -1630,7 +1634,9 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
                     final commentedAt = Tooltip(
                       message: 'コメントが投稿された時刻: $commentedAtFullDateTimeText\n番組開始からの経過時間: $commentedAtElapsedText',
-                      child: SelectableText((sharedPreferences!.getBool('commentTimeFormatElapsed') ?? false) ? commentedAtElapsedText : commentedAtDateTimeText)
+                      child: SelectableText(
+                        (sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue) ? commentedAtElapsedText : 
+                          commentedAtDateTimeText)
                     );
 
                     TextStyle? textStyle;
