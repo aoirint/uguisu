@@ -38,7 +38,6 @@ jobs:
         if: failure()
         uses: peter-evans/create-pull-request@v4
         with:
-          token : ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           title: 'Update CLA signatures'
           base: 'main'
           branch: 'cla-assistant/update-signatures'
