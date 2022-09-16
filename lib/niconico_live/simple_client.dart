@@ -154,19 +154,20 @@ class NoWatchWebSocketUrlFoundException implements Exception {
 class NiconicoLiveSimpleClient {
   final String userAgent;
 
-  String? livePageUrl;
   NiconicoLoginCookie? loginCookie;
-  NiconicoLivePage? livePage;
-  NiconicoLiveWatchClient? watchClient;
+  Future<Uri> Function(int userId)? getUserPageUri;
   NiconicoUserIconCacheClient? userIconCacheClient;
   NiconicoUserPageCacheClient? userPageCacheClient;
+
+  String? livePageUrl;
+  NiconicoLivePage? livePage;
+  NiconicoLiveWatchClient? watchClient;
 
   late List<Room> rooms;
 
   Function(ScheduleMessage scheduleMessage)? onScheduleMessage;
   Function(StatisticsMessage statisticsMessage)? onStatisticsMessage;
   Function(BaseChatMessage chatMessage)? onChatMessage;
-  Future<Uri> Function(int userId)? getUserPageUri;
 
   late Logger logger;
 
@@ -177,26 +178,18 @@ class NiconicoLiveSimpleClient {
     logger = Logger('NiconicoLiveSimpleClient');
   }
 
-  Future<void> connect({
-    required String livePageUrl, // https://live.nicovideo.jp/watch/lv000000000
+  Future<void> initialize({
     NiconicoLoginCookie? loginCookie,
-    required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
-    required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
-    required Function(BaseChatMessage chatMessage) onChatMessage,
     required Future<NiconicoUserIconCache?> Function(int userId) userIconLoadCacheOrNull,
     required Future<void> Function(NiconicoUserIconCache userIcon) userIconSaveCache,
     required Future<Uri> Function(int userId) getUserPageUri,
     required Future<NiconicoUserPageCache?> Function(int userId) userPageLoadCacheOrNull,
     required Future<void> Function(NiconicoUserPageCache userPage) userPageSaveCache,
   }) async {
-    this.livePageUrl = livePageUrl;
     this.loginCookie = loginCookie;
-    this.onScheduleMessage = onScheduleMessage;
-    this.onStatisticsMessage = onStatisticsMessage;
-    this.onChatMessage = onChatMessage;
     this.getUserPageUri = getUserPageUri;
 
-    NiconicoUserIconCacheClient userIconCacheClient = NiconicoUserIconCacheClient(
+    final userIconCacheClient = NiconicoUserIconCacheClient(
       cookieJar: loginCookie?.cookieJar,
       userAgent: userAgent,
       loadCacheOrNull: userIconLoadCacheOrNull,
@@ -204,13 +197,25 @@ class NiconicoLiveSimpleClient {
     );
     this.userIconCacheClient = userIconCacheClient;
 
-    NiconicoUserPageCacheClient userPageCacheClient = NiconicoUserPageCacheClient(
+    final userPageCacheClient = NiconicoUserPageCacheClient(
       cookieJar: loginCookie?.cookieJar,
       userAgent: userAgent,
       loadCacheOrNull: userPageLoadCacheOrNull,
       saveCache: userPageSaveCache,
     );
     this.userPageCacheClient = userPageCacheClient;
+  }
+
+  Future<void> connect({
+    required String livePageUrl, // https://live.nicovideo.jp/watch/lv000000000
+    required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
+    required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
+    required Function(BaseChatMessage chatMessage) onChatMessage,
+  }) async {
+    this.livePageUrl = livePageUrl;
+    this.onScheduleMessage = onScheduleMessage;
+    this.onStatisticsMessage = onStatisticsMessage;
+    this.onChatMessage = onChatMessage;
 
     NiconicoLivePage livePage = await NiconicoLivePageClient().get(
       uri: Uri.parse(livePageUrl),
