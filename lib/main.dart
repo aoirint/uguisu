@@ -1269,6 +1269,16 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               });
             });
           },
+          onRFrameClosed: (rvalue) {
+            // On first frame fetched
+            logger?.info('R frame $rvalue closed');
+
+            if (rvalue == 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                chatMessageListScrollController.jumpTo(chatMessageListScrollController.position.maxScrollExtent);
+              });
+            }
+          }
         );
         
         final liveUserId = int.parse(simpleClient!.livePage!.program.supplier.programProviderId);
