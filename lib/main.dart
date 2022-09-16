@@ -1341,37 +1341,40 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   ),
                   Padding(
                     padding: const EdgeInsets.all(8.0), 
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final livePageIdOrUrl = liveIdOrUrlTextController.text;
-                        final livePageUrl = __createLivePageUrl(livePageIdOrUrl: livePageIdOrUrl);
-                        if (livePageUrl == null) {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) {
-                              return AlertDialog(
-                                title: const Text('エラー：入力された番組IDまたはURLの形式は非対応です'),
-                                content: const Text('正しい形式で入力されているか確認してください。'),
-                                actions: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: ElevatedButton(
-                                      child: const Text('OK'),
-                                      onPressed: () => Navigator.pop(context),
+                    child: Tooltip(
+                      message: '番組に接続',
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final livePageIdOrUrl = liveIdOrUrlTextController.text;
+                          final livePageUrl = __createLivePageUrl(livePageIdOrUrl: livePageIdOrUrl);
+                          if (livePageUrl == null) {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) {
+                                return AlertDialog(
+                                  title: const Text('エラー：入力された番組IDまたはURLの形式は非対応です'),
+                                  content: const Text('正しい形式で入力されているか確認してください。'),
+                                  actions: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: ElevatedButton(
+                                        child: const Text('OK'),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
+                                  ],
+                                );
+                              },
+                            );
 
-                          return;
-                        }
+                            return;
+                          }
 
-                        setLivePageUrl(livePageUrl: livePageUrl, loginCookie: loginCookieData.loginCookie);
-                      },
-                      child: const Text('Connect'),
+                          setLivePageUrl(livePageUrl: livePageUrl, loginCookie: loginCookieData.loginCookie);
+                        },
+                        child: const Padding(padding: EdgeInsets.all(4.0), child: Icon(Icons.power)),
+                      ),
                     ),
                   ),
                   Padding(
