@@ -38,7 +38,7 @@ jobs:
         if: failure()
         uses: peter-evans/create-pull-request@v4
         with:
-          title: 'Update CLA signature'
+          title: 'Update CLA signatures'
           base: 'main'
           branch: 'cla-assistant/update-signatures'
           delete-branch: true
