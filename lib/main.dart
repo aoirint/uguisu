@@ -834,6 +834,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   List<BaseChatMessage> chatMessages = [];
 
   NiconicoLiveSimpleClient? simpleClient;
+  bool fetchAllRunning = false;
+
   final liveIdOrUrlTextController = TextEditingController(text: '');
 
   Logger? logger;
@@ -1472,7 +1474,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: ElevatedButton(
-                  onPressed: livePage == null || getMinCommentNo() == 1 ? null : () async {
+                  onPressed: livePage == null || loginCookieData.loginCookie == null || getMinCommentNo() == 1 || fetchAllRunning ? null : () async {
                     if (chatMessages.isEmpty) {
                       logger?.warning('No fetched chat messages');
                       return;
@@ -1485,6 +1487,10 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       logger?.warning('No room');
                       return;
                     }
+
+                    setState(() {
+                      fetchAllRunning = true;
+                    });
 
                     final room = simpleClient!.rooms[0];
 
@@ -1541,6 +1547,10 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                     }
 
                     await addAllChatMessagesIfNotExists(chatMessages: newChatMessages);
+
+                    setState(() {
+                      fetchAllRunning = false;
+                    });
 
                     // const firstNo = 1;
                     // const windowSize = 150;
