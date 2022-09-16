@@ -14,6 +14,7 @@ import 'package:collection/collection.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+import 'package:open_filex/open_filex.dart';
 
 final mainLogger = Logger('main');
 NiconicoLiveSimpleClient? simpleClient;
@@ -58,6 +59,109 @@ bool isDesktopEnvironment() {
   return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 }
 
+Future<String?> getUserIconPath(int userId) async {
+  final appSupportDir = await getApplicationSupportDirectory();
+  final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
+  if (! await userIconJsonFile.exists()) {
+    mainLogger.warning('Cache-miss for user/$userId. User icon json not exists');
+    return null;
+  }
+
+  final userIconRawJson = await userIconJsonFile.readAsString(encoding: utf8);
+  final userIconJson = jsonDecode(userIconRawJson);
+
+  if (userIconJson['version'] != '1') {
+    mainLogger.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
+    return null;
+  }
+
+  final userIdInJson = userIconJson['userId'];
+  if (userIdInJson != userId) {
+    throw Exception('Invalid user icon json. userId does not match. given: $userId, json: $userIdInJson');
+  }
+
+  final String iconPath = userIconJson['iconPath'];
+  return iconPath;
+}
+
+Future<NiconicoUserIconCache?> loadUserIconCache(int userId) async {
+  final appSupportDir = await getApplicationSupportDirectory();
+  final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
+  if (! await userIconJsonFile.exists()) {
+    mainLogger.warning('Cache-miss for user/$userId. User icon json not exists');
+    return null;
+  }
+
+  final userIconRawJson = await userIconJsonFile.readAsString(encoding: utf8);
+  final userIconJson = jsonDecode(userIconRawJson);
+
+  if (userIconJson['version'] != '1') {
+    mainLogger.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
+    return null;
+  }
+
+  final userIdInJson = userIconJson['userId'];
+  if (userIdInJson != userId) {
+    throw Exception('Invalid user icon json. userId does not match. given: $userId, json: $userIdInJson');
+  }
+
+  final iconUri = Uri.parse(userIconJson['iconUri']);
+  final String contentType = userIconJson['contentType'];
+  final iconUploadedAt = userIconJson['iconUploadedAt'] != null ? DateTime.parse(userIconJson['iconUploadedAt']) : null;
+  final iconFetchedAt = DateTime.parse(userIconJson['iconFetchedAt']);
+  final String iconPath = userIconJson['iconPath'];
+
+  final iconFile = File(iconPath);
+  if (! await iconFile.exists()) {
+    mainLogger.warning('Unexpected cache-miss for user/$userId. User icon image not exists');
+    return null;
+  }
+
+  final iconBytes = await iconFile.readAsBytes();
+
+  return NiconicoUserIconCache(
+    userId: userId,
+    userIcon: NiconicoUserIcon(
+      iconUri: iconUri,
+      contentType: contentType,
+      iconBytes: iconBytes,
+    ),
+    iconUploadedAt: iconUploadedAt,
+    iconFetchedAt: iconFetchedAt,
+  );
+}
+
+Future<void> saveUserIconCache(NiconicoUserIconCache userIcon) async {
+  final userId = userIcon.userId;
+  final contentType = userIcon.userIcon.contentType;
+
+  String? iconFileNameSuffix;
+  if (contentType == 'image/png') iconFileNameSuffix = '.png';
+  if (contentType == 'image/jpeg') iconFileNameSuffix = '.jpg';
+  if (contentType == 'image/gif') iconFileNameSuffix = '.gif';
+  if (iconFileNameSuffix == null) {
+    throw Exception('Unsupported content type: $contentType');
+  }
+
+  final appSupportDir = await getApplicationSupportDirectory();
+  final iconFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId$iconFileNameSuffix'));
+  await iconFile.parent.create(recursive: true);
+  await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
+
+  final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
+  final userIconRawJson = jsonEncode({
+    'version': '1',
+    'userId': userId,
+    'iconUri': userIcon.userIcon.iconUri.toString(),
+    'contentType': userIcon.userIcon.contentType,
+    'iconUploadedAt': userIcon.iconUploadedAt?.toIso8601String(),
+    'iconFetchedAt': userIcon.iconFetchedAt.toIso8601String(),
+    'iconPath': iconFile.path,
+  });
+
+  await userIconJsonFile.writeAsString(userIconRawJson, encoding: utf8, flush: true);
+}
+
 Future<void> initSimpleClient({
   NiconicoLoginCookie? loginCookie,
 }) async {
@@ -76,82 +180,8 @@ Future<void> initSimpleClient({
 
   await simpleClient!.initialize(
     loginCookie: loginCookie,
-    userIconLoadCacheOrNull: (userId) async {
-      final appSupportDir = await getApplicationSupportDirectory();
-      final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
-      if (! await userIconJsonFile.exists()) {
-        mainLogger.warning('Cache-miss for user/$userId. User icon json not exists');
-        return null;
-      }
-
-      final userIconRawJson = await userIconJsonFile.readAsString(encoding: utf8);
-      final userIconJson = jsonDecode(userIconRawJson);
-
-      if (userIconJson['version'] != '1') {
-        mainLogger.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
-        return null;
-      }
-
-      final userIdInJson = userIconJson['userId'];
-      if (userIdInJson != userId) {
-        throw Exception('Invalid user icon json. userId does not match. given: $userId, json: $userIdInJson');
-      }
-
-      final iconUri = Uri.parse(userIconJson['iconUri']);
-      final String contentType = userIconJson['contentType'];
-      final iconUploadedAt = userIconJson['iconUploadedAt'] != null ? DateTime.parse(userIconJson['iconUploadedAt']) : null;
-      final iconFetchedAt = DateTime.parse(userIconJson['iconFetchedAt']);
-      final String iconPath = userIconJson['iconPath'];
-
-      final iconFile = File(iconPath);
-      if (! await iconFile.exists()) {
-        mainLogger.warning('Unexpected cache-miss for user/$userId. User icon image not exists');
-        return null;
-      }
-
-      final iconBytes = await iconFile.readAsBytes();
-
-      return NiconicoUserIconCache(
-        userId: userId,
-        userIcon: NiconicoUserIcon(
-          iconUri: iconUri,
-          contentType: contentType,
-          iconBytes: iconBytes,
-        ),
-        iconUploadedAt: iconUploadedAt,
-        iconFetchedAt: iconFetchedAt,
-      );
-    },
-    userIconSaveCache: (userIcon) async {
-      final userId = userIcon.userId;
-      final contentType = userIcon.userIcon.contentType;
-
-      String? iconFileNameSuffix;
-      if (contentType == 'image/png') iconFileNameSuffix = '.png';
-      if (contentType == 'image/jpeg') iconFileNameSuffix = '.jpg';
-      if (contentType == 'image/gif') iconFileNameSuffix = '.gif';
-      if (iconFileNameSuffix == null) {
-        throw Exception('Unsupported content type: $contentType');
-      }
-
-      final appSupportDir = await getApplicationSupportDirectory();
-      final iconFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId$iconFileNameSuffix'));
-      await iconFile.parent.create(recursive: true);
-      await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
-
-      final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
-      final userIconRawJson = jsonEncode({
-        'version': '1',
-        'userId': userId,
-        'iconUri': userIcon.userIcon.iconUri.toString(),
-        'contentType': userIcon.userIcon.contentType,
-        'iconUploadedAt': userIcon.iconUploadedAt?.toIso8601String(),
-        'iconFetchedAt': userIcon.iconFetchedAt.toIso8601String(),
-        'iconPath': iconFile.path,
-      });
-
-      await userIconJsonFile.writeAsString(userIconRawJson, encoding: utf8, flush: true);
-    },
+    userIconLoadCacheOrNull: loadUserIconCache,
+    userIconSaveCache: saveUserIconCache,
     getUserPageUri: getUserPageUri,
     userPageLoadCacheOrNull: (userId) async {
       final appSupportDir = await getApplicationSupportDirectory();
@@ -1362,11 +1392,31 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(4.0),
-                child: SizedBox(
-                  width: 64.0,
-                  height: 64.0,
-                  child: FittedBox(child: livePageSupplierUserIconCache != null ? Image.memory(livePageSupplierUserIconCache!.userIcon.iconBytes) : const Icon(Icons.account_box)),
-                  // child: FittedBox(child: Icon(Icons.account_box)),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () async {
+                      if (livePageSupplierUserPageCache == null) return;
+
+                      final iconPath = await getUserIconPath(livePageSupplierUserPageCache!.userId);
+                      if (iconPath == null) return;
+
+                      await OpenFilex.open(iconPath);
+                    },
+                    child: Tooltip(
+                      message: 'アイコンの画像ファイルを開く',
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 64.0,
+                            height: 64.0,
+                            child: FittedBox(child: livePageSupplierUserIconCache != null ? Image.memory(livePageSupplierUserIconCache!.userIcon.iconBytes) : const Icon(Icons.account_box)),
+                            // child: FittedBox(child: Icon(Icons.account_box)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
               Column(
@@ -1459,9 +1509,25 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   children: chatMessages.map((chatMessage) {
                     Widget icon = Container();
                     if (chatMessage is NormalChatMessage) {
-                      final iconBytes = chatMessage.commentUser?.userIconCache?.userIcon.iconBytes;
-                      if (iconBytes != null) {
-                        icon = Image.memory(iconBytes);
+                      final userIconCache = chatMessage.commentUser?.userIconCache;
+                      if (userIconCache != null) {
+                        final iconBytes = userIconCache.userIcon.iconBytes;
+
+                        icon = MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final iconPath = await getUserIconPath(userIconCache.userId);
+                              if (iconPath == null) return;
+
+                              await OpenFilex.open(iconPath);
+                            },
+                            child: Tooltip(
+                              message: 'アイコンの画像ファイルを開く',
+                              child: Image.memory(iconBytes),
+                            ),
+                          ),
+                        );
                       }
                     }
 
