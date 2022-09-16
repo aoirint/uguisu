@@ -1579,6 +1579,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               child: ListView.builder(
                 controller: chatMessageListScrollController,
                 itemCount: chatMessages.length,
+                // itemExtent: 50,
                 itemBuilder: (context, index) {
                   final chatMessage = chatMessages[index];
 
