@@ -1160,13 +1160,13 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
     nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
 
+    // ListViewの個数が変わる前にatBottomを検査
     final isScrollEnd = chatMessageListScrollController.position.atEdge && chatMessageListScrollController.position.pixels != 0;
 
     setState(() {
       this.chatMessages = nextChatMessages;
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
-
         if (isScrollEnd) {
           chatMessageListScrollController.jumpTo(chatMessageListScrollController.position.maxScrollExtent);
         }
