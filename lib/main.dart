@@ -1217,7 +1217,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           builder: (_) {
             return AlertDialog(
               title: const Text('エラー：番組への接続に失敗しました'),
-              content: const Text('番組が終了しているか、公開されていない場合に発生することがあります。\n番組が終了している場合、タイムシフト視聴可能なアカウントでログインすると解消する場合があります。'),
+              content: const Text('番組が終了しているか、公開されていない場合に発生することがあります。\n番組が終了している場合、タイムシフト視聴可能なアカウントでログインすると解消する場合があります。\nタイムシフトが非公開または公開期間終了済みの場合、コメントを取得することはできません。'),
               actions: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
