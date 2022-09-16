@@ -427,16 +427,23 @@ Future<void> saveLiveComment({
   await file.writeAsString(rawJson, encoding: utf8, flush: true);
 }
 
+class NiconicoLoginUser {
+  final NiconicoUserPageCache loginUserPageCache;
+  final NiconicoUserIconCache loginUserIconCache;
+
+  NiconicoLoginUser({
+    required this.loginUserPageCache,
+    required this.loginUserIconCache,
+  });
+}
+
 class NiconicoLoginUserData with ChangeNotifier {
-  NiconicoUserPageCache? loginUserPageCache;
-  NiconicoUserIconCache? loginUserIconCache;
+  NiconicoLoginUser? loginUser;
 
   void setLoginUserData({
-    NiconicoUserPageCache? loginUserPageCache,
-    NiconicoUserIconCache? loginUserIconCache,
+    NiconicoLoginUser? loginUser,
   }) {
-    this.loginUserPageCache = loginUserPageCache;
-    this.loginUserIconCache = loginUserIconCache;
+    this.loginUser = loginUser;
     notifyListeners();
   }
 }
@@ -494,6 +501,7 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
   @override
   Widget build(BuildContext context) {
     final loginCookieData = context.watch<NiconicoLoginCookieData>();
+    final loginUserData = context.watch<NiconicoLoginUserData>();
 
     Future(() async {
       final sharedPreferences = await SharedPreferences.getInstance();
@@ -541,17 +549,44 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
               padding: const EdgeInsets.all(8.0),
               child: Row(
                 children: [
-                  ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Text('ニコニコ動画'),
+                  Tooltip(
+                    message: 'ニコニコ動画アカウントにログイン',
+                    child: ElevatedButton(
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Text('ニコニコ動画'),
+                      ),
+                      onPressed: () async {
+                        Navigator.pushNamed(context, '/config/login');
+                      },
                     ),
-                    onPressed: () async {
-                      Navigator.pushNamed(context, '/config/login');
-                    },
                   ),
                   const SizedBox(width: 8.0),
-                  loginCookieData.loginCookie != null ? const Icon(Icons.done) : Column(),
+                  loginCookieData.loginCookie != null ?
+                    const Tooltip(message: 'ログイン済み', child: Icon(Icons.done)) : 
+                    Column(),
+                  const SizedBox(width: 8.0),
+                  loginUserData.loginUser == null ? Column() : MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final url = 'https://www.nicovideo.jp/user/${loginUserData.loginUser!.loginUserPageCache.userId}';
+                        if (!await launchUrlString(url)) {
+                          throw Exception('Failed to open URL: $url');
+                        }
+                      },
+                      child: Tooltip(
+                        message: 'ユーザーページを開く',
+                        child: Row(
+                          children: [
+                            SizedBox(width: 32.0, height: 32.0, child: Image.memory(loginUserData.loginUser!.loginUserIconCache.userIcon.iconBytes)),
+                            const SizedBox(width: 8.0),
+                            Text('${loginUserData.loginUser!.loginUserPageCache.userPage.nickname} (ID: ${loginUserData.loginUser!.loginUserPageCache.userId})'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1213,10 +1248,32 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     final loginUserData = context.watch<NiconicoLoginUserData>();
 
     Future(() async {
-      if (loginCookieData.loginCookie != null && loginUserData.loginUserPageCache == null) {
-      }
-      if (loginCookieData.loginCookie != null && loginUserData.loginUserIconCache == null) {
-      }
+      if (loginCookieData.loginCookie == null) {
+        if (loginUserData.loginUser != null) {
+          loginUserData.setLoginUserData(loginUser: null);
+        }
+      } else {
+        final userId = int.parse(loginCookieData.loginCookie!.userId);
+
+        if (loginUserData.loginUser == null) {
+          final loginUserPageCache = await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(
+            userId: userId,
+            userPageUri: await simpleClient!.getUserPageUri!.call(userId),
+          );
+
+          final loginUserIconCache = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(
+            userId: userId,
+            iconUri: Uri.parse(loginUserPageCache.userPage.iconUrl),
+          );
+
+          loginUserData.setLoginUserData(
+            loginUser: NiconicoLoginUser(
+              loginUserPageCache: loginUserPageCache,
+              loginUserIconCache: loginUserIconCache,
+            ),
+          );
+        }
+      } 
     });
 
     return Scaffold(
