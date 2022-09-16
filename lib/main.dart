@@ -1748,7 +1748,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       // final windowHeadNoList =List<int>.generate(windowNum, (index) => firstNo + windowSize * index);
                       // print(windowHeadNoList);
                     },
-                    child: const Text('Fetch All'),
+                    child: const Padding(padding: EdgeInsets.all(4.0), child: Text('すべて取得')),
                   ),
                 ),
               ),
