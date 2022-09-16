@@ -1376,11 +1376,14 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   ),
                   Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/config');
-                      },
-                      child: const Text('Config'),
+                    child: Tooltip(
+                      message: '設定',
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/config');
+                        },
+                        child: const Padding(padding: EdgeInsets.all(4.0), child: Icon(Icons.settings)),
+                      ),
                     ),
                   ),
                 ],
