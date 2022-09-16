@@ -522,14 +522,17 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Icon(Icons.arrow_back),
+                  child: Tooltip(
+                    message: '前の画面に戻る',
+                    child: ElevatedButton(
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Icon(Icons.arrow_back),
+                      ),
+                      onPressed: () async {
+                        Navigator.popUntil(context, ModalRoute.withName('/'));
+                      },
                     ),
-                    onPressed: () async {
-                      Navigator.popUntil(context, ModalRoute.withName('/'));
-                    },
                   ),
                 ),
                 const Expanded(
@@ -794,14 +797,17 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Icon(Icons.arrow_back),
+                  child: Tooltip(
+                    message: '前の画面に戻る',
+                    child: ElevatedButton(
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Icon(Icons.arrow_back),
+                      ),
+                      onPressed: () async {
+                        Navigator.popUntil(context, ModalRoute.withName('/config'));
+                      },
                     ),
-                    onPressed: () async {
-                      Navigator.popUntil(context, ModalRoute.withName('/config'));
-                    },
                   ),
                 ),
                 const Padding(
@@ -919,17 +925,20 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Icon(Icons.arrow_back),
-                    ),
-                    onPressed: () async {
-                      otpTextController.clear();
-                      deviceNameTextController.clear();
+                  child: Tooltip(
+                    message: '前の画面に戻る',
+                    child: ElevatedButton(
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Icon(Icons.arrow_back),
+                      ),
+                      onPressed: () async {
+                        otpTextController.clear();
+                        deviceNameTextController.clear();
 
-                      context.read<NiconicoLoginResultData>().setLoginResult(null);
-                    },
+                        context.read<NiconicoLoginResultData>().setLoginResult(null);
+                      },
+                    ),
                   ),
                 ),
                 const Padding(
@@ -1517,46 +1526,58 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.person))),
-                          const SizedBox(width: 4.0),
-                          Text(statisticsMessage?.viewers != null ? statisticsMessage!.viewers.toString() :  '-'),
-                        ],
+                      child: Tooltip(
+                        message: '来場者数',
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.person))),
+                            const SizedBox(width: 4.0),
+                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.viewers.toString() :  '-'),
+                          ],
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.comment))),
-                          const SizedBox(width: 4.0),
-                          Text(statisticsMessage?.viewers != null ? statisticsMessage!.comments.toString() :  '-'),
-                        ],
+                      child: Tooltip(
+                        message: 'コメント数',
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.comment))),
+                            const SizedBox(width: 4.0),
+                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.comments.toString() :  '-'),
+                          ],
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.campaign))),
-                          const SizedBox(width: 4.0),
-                          Text(statisticsMessage?.viewers != null ? statisticsMessage!.adPoints.toString() :  '-'),
-                        ],
+                      child: Tooltip(
+                        message: 'ニコニ広告ポイント',
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.campaign))),
+                            const SizedBox(width: 4.0),
+                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.adPoints.toString() :  '-'),
+                          ],
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.redeem))),
-                          const SizedBox(width: 4.0),
-                          Text(statisticsMessage?.viewers != null ? statisticsMessage!.giftPoints.toString() :  '-'),
-                        ],
+                      child: Tooltip(
+                        message: 'ギフトポイント',
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.redeem))),
+                            const SizedBox(width: 4.0),
+                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.giftPoints.toString() :  '-'),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -1564,92 +1585,95 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: ElevatedButton(
-                  onPressed: livePage == null || loginCookieData.loginCookie == null || getMinCommentNo() == 1 || fetchAllRunning ? null : () async {
-                    if (chatMessages.isEmpty) {
-                      logger?.warning('No fetched chat messages');
-                      return;
-                    }
+                child: Tooltip(
+                  message: '未取得コメントをすべて取得',
+                  child: ElevatedButton(
+                    onPressed: livePage == null || loginCookieData.loginCookie == null || getMinCommentNo() == 1 || fetchAllRunning ? null : () async {
+                      if (chatMessages.isEmpty) {
+                        logger?.warning('No fetched chat messages');
+                        return;
+                      }
 
-                    const userAgent = 'uguisu/0.0.0';
-                    const windowSize = 200;
+                      const userAgent = 'uguisu/0.0.0';
+                      const windowSize = 200;
 
-                    if (simpleClient!.rooms.isEmpty) {
-                      logger?.warning('No room');
-                      return;
-                    }
+                      if (simpleClient!.rooms.isEmpty) {
+                        logger?.warning('No room');
+                        return;
+                      }
 
-                    setState(() {
-                      fetchAllRunning = true;
-                    });
+                      setState(() {
+                        fetchAllRunning = true;
+                      });
 
-                    final room = simpleClient!.rooms[0];
+                      final room = simpleClient!.rooms[0];
 
-                    // final maxNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no > next.chatMessage.no ? cur : next);
-                    // final maxNo = maxNoChatMessage.chatMessage.no;
+                      // final maxNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no > next.chatMessage.no ? cur : next);
+                      // final maxNo = maxNoChatMessage.chatMessage.no;
 
-                    var minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
-                    var minNo = minNoChatMessage.chatMessage.no;
-                    var minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
+                      var minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+                      var minNo = minNoChatMessage.chatMessage.no;
+                      var minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
 
-                    final windowNum = (minNo / windowSize).ceil();
-                    // final windowHeadNoList = List<int>.generate(windowNum, (index) => minNo - windowSize * (index + 1));
+                      final windowNum = (minNo / windowSize).ceil();
+                      // final windowHeadNoList = List<int>.generate(windowNum, (index) => minNo - windowSize * (index + 1));
 
-                    final newChatMessages = <BaseChatMessage>[];
-                    var rvalue = 0;
-                    var pvalue = 0;
-                    for (var windowIndex=0; windowIndex<windowNum; windowIndex+=1) {
-                      logger?.info('Window $windowIndex/$windowNum (minNo: $minNo, minWhen: $minWhen)');
+                      final newChatMessages = <BaseChatMessage>[];
+                      var rvalue = 0;
+                      var pvalue = 0;
+                      for (var windowIndex=0; windowIndex<windowNum; windowIndex+=1) {
+                        logger?.info('Window $windowIndex/$windowNum (minNo: $minNo, minWhen: $minWhen)');
 
-                      final thread = await NiconicoLiveCommentWaybackClient().fetchWaybackThread(
-                        websocketUrl: room.roomMessage.messageServer.uri,
-                        userAgent: userAgent,
-                        thread: room.roomMessage.threadId,
-                        resFrom: -windowSize,
-                        userId: loginCookieData.loginCookie!.userId,
-                        when: (minWhen.millisecondsSinceEpoch / 1000).floor(),
-                        rvalue: rvalue,
-                        pvalue: pvalue,
-                      );
+                        final thread = await NiconicoLiveCommentWaybackClient().fetchWaybackThread(
+                          websocketUrl: room.roomMessage.messageServer.uri,
+                          userAgent: userAgent,
+                          thread: room.roomMessage.threadId,
+                          resFrom: -windowSize,
+                          userId: loginCookieData.loginCookie!.userId,
+                          when: (minWhen.millisecondsSinceEpoch / 1000).floor(),
+                          rvalue: rvalue,
+                          pvalue: pvalue,
+                        );
 
-                      // TODO: commonize parse and resolve chat message
-                      for (final chatMessage in thread.chatMessages) {
-                        var cm = simpleClient!.parseChatMessage(chatMessage);
+                        // TODO: commonize parse and resolve chat message
+                        for (final chatMessage in thread.chatMessages) {
+                          var cm = simpleClient!.parseChatMessage(chatMessage);
 
-                        if (cm is LazyNormalChatMessage) {
-                          cm = await cm.resolve();
+                          if (cm is LazyNormalChatMessage) {
+                            cm = await cm.resolve();
+                          }
+
+                          newChatMessages.add(cm);
                         }
 
-                        newChatMessages.add(cm);
+                        if (newChatMessages.isEmpty) {
+                          logger?.info('No new chat message, break');
+                          break;
+                        }
+
+                        minNoChatMessage = newChatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+                        minNo = minNoChatMessage.chatMessage.no;
+                        minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
+
+                        rvalue += 1;
+                        pvalue += 5;
+                        await Future.delayed(const Duration(milliseconds: 100));
                       }
 
-                      if (newChatMessages.isEmpty) {
-                        logger?.info('No new chat message, break');
-                        break;
-                      }
+                      await addAllChatMessagesIfNotExists(chatMessages: newChatMessages);
 
-                      minNoChatMessage = newChatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
-                      minNo = minNoChatMessage.chatMessage.no;
-                      minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
+                      setState(() {
+                        fetchAllRunning = false;
+                      });
 
-                      rvalue += 1;
-                      pvalue += 5;
-                      await Future.delayed(const Duration(milliseconds: 100));
-                    }
-
-                    await addAllChatMessagesIfNotExists(chatMessages: newChatMessages);
-
-                    setState(() {
-                      fetchAllRunning = false;
-                    });
-
-                    // const firstNo = 1;
-                    // const windowSize = 150;
-                    // final windowNum = ((minNo - firstNo) / windowSize).ceil();
-                    // final windowHeadNoList =List<int>.generate(windowNum, (index) => firstNo + windowSize * index);
-                    // print(windowHeadNoList);
-                  },
-                  child: const Text('Fetch All'),
+                      // const firstNo = 1;
+                      // const windowSize = 150;
+                      // final windowNum = ((minNo - firstNo) / windowSize).ceil();
+                      // final windowHeadNoList =List<int>.generate(windowNum, (index) => firstNo + windowSize * index);
+                      // print(windowHeadNoList);
+                    },
+                    child: const Text('Fetch All'),
+                  ),
                 ),
               ),
             ],
