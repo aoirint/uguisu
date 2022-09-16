@@ -18,6 +18,7 @@ import 'package:open_filex/open_filex.dart';
 
 final mainLogger = Logger('main');
 NiconicoLiveSimpleClient? simpleClient;
+SharedPreferences? sharedPreferences;
 
 void main() async {
   Logger.root.level = Level.ALL;
@@ -27,7 +28,7 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  final sharedPreferences = await SharedPreferences.getInstance();
+  sharedPreferences = await SharedPreferences.getInstance();
 
   if (isDesktopEnvironment()) {
     await windowManager.ensureInitialized();
@@ -45,10 +46,10 @@ void main() async {
       await windowManager.focus();
     });
 
-    final windowOpacityValue = sharedPreferences.getDouble('windowOpacity') ?? 1.0;
+    final windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? 1.0;
     windowManager.setOpacity(windowOpacityValue);
 
-    final alwaysOnTop = sharedPreferences.getBool('alwaysOnTop') ?? false;
+    final alwaysOnTop = sharedPreferences!.getBool('alwaysOnTop') ?? false;
     windowManager.setAlwaysOnTop(alwaysOnTop);
   }
 
@@ -531,6 +532,7 @@ class NiconicoConfigWidget extends StatefulWidget {
 class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
   double windowOpacityValue = 1.0;
   bool alwaysOnTopValue = false;
+  bool commentTimeFormatElapsedValue = false;
 
   @override
   Widget build(BuildContext context) {
@@ -538,10 +540,10 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
     final loginUserData = context.watch<NiconicoLoginUserData>();
 
     Future(() async {
-      final sharedPreferences = await SharedPreferences.getInstance();
       setState(() {
-        windowOpacityValue = sharedPreferences.getDouble('windowOpacity') ?? 1.0;
-        alwaysOnTopValue = sharedPreferences.getBool('alwaysOnTop') ?? false;
+        windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? 1.0;
+        alwaysOnTopValue = sharedPreferences!.getBool('alwaysOnTop') ?? false;
+        commentTimeFormatElapsedValue = sharedPreferences!.getBool('commentTimeFormatElapsed') ?? false;
       });
     });
 
@@ -650,8 +652,7 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
                           windowOpacityValue = newValue;
 
                           Future(() async {
-                            final sharedPreferences = await SharedPreferences.getInstance();
-                            sharedPreferences.setDouble('windowOpacity', windowOpacityValue);
+                            sharedPreferences!.setDouble('windowOpacity', windowOpacityValue);
                             windowManager.setOpacity(windowOpacityValue);
                           });
                         });
@@ -674,9 +675,28 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
                         alwaysOnTopValue = newValue;
 
                         Future(() async {
-                          final sharedPreferences = await SharedPreferences.getInstance();
-                          sharedPreferences.setBool('alwaysOnTop', alwaysOnTopValue);
+                          sharedPreferences!.setBool('alwaysOnTop', alwaysOnTopValue);
                           windowManager.setAlwaysOnTop(alwaysOnTopValue);
+                        });
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  const Text('コメント投稿時間を番組経過時間で表示'),
+                  Switch(
+                    value: commentTimeFormatElapsedValue,
+                    onChanged: (newValue) {
+                      setState(() {
+                        commentTimeFormatElapsedValue = newValue;
+
+                        Future(() async {
+                          sharedPreferences!.setBool('commentTimeFormatElapsed', commentTimeFormatElapsedValue);
                         });
                       });
                     },
@@ -1591,9 +1611,23 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       }
                     }
 
-                    final commentedAtDateTime = DateTime.fromMillisecondsSinceEpoch(chatMessage.chatMessage.date * 1000, isUtc: true).toLocal();
-                    final dateFormat = DateFormat('HH:mm:ss');
-                    final commentedAt = SelectableText(dateFormat.format(commentedAtDateTime));
+                    var commentedAtText = '';
+                    final commentedAtDateTime = DateTime.fromMicrosecondsSinceEpoch(chatMessage.chatMessage.date * 1000 * 1000 + chatMessage.chatMessage.dateUsec, isUtc: true);
+                    if (sharedPreferences!.getBool('commentTimeFormatElapsed') ?? false) {
+                      final commentedAtDuration = Duration(microseconds: commentedAtDateTime.microsecondsSinceEpoch);
+                      final liveBeginTimeDuration = Duration(seconds: livePage!.program.beginTime);
+                      final commentedAtElapsed = commentedAtDuration - liveBeginTimeDuration;
+
+                      final inHours = commentedAtElapsed.inHours;
+                      final inMinutes = commentedAtElapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
+                      final inSeconds = commentedAtElapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+                      commentedAtText = '$inHours:$inMinutes:$inSeconds';
+                    } else {
+                      final dateFormat = DateFormat('HH:mm:ss');
+                      commentedAtText = dateFormat.format(commentedAtDateTime.toLocal());
+                    }
+                    final commentedAt = SelectableText(commentedAtText);
 
                     TextStyle? textStyle;
                     if (chatMessage is! NormalChatMessage) {
