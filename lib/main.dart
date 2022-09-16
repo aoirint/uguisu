@@ -1611,23 +1611,27 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       }
                     }
 
-                    var commentedAtText = '';
                     final commentedAtDateTime = DateTime.fromMicrosecondsSinceEpoch(chatMessage.chatMessage.date * 1000 * 1000 + chatMessage.chatMessage.dateUsec, isUtc: true);
-                    if (sharedPreferences!.getBool('commentTimeFormatElapsed') ?? false) {
-                      final commentedAtDuration = Duration(microseconds: commentedAtDateTime.microsecondsSinceEpoch);
-                      final liveBeginTimeDuration = Duration(seconds: livePage!.program.beginTime);
-                      final commentedAtElapsed = commentedAtDuration - liveBeginTimeDuration;
+                    final commentedAtDuration = Duration(microseconds: commentedAtDateTime.microsecondsSinceEpoch);
+                    final liveBeginTimeDuration = Duration(seconds: livePage!.program.beginTime);
+                    final commentedAtElapsed = commentedAtDuration - liveBeginTimeDuration;
 
-                      final inHours = commentedAtElapsed.inHours;
-                      final inMinutes = commentedAtElapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
-                      final inSeconds = commentedAtElapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+                    final inHours = commentedAtElapsed.inHours;
+                    final inMinutes = commentedAtElapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
+                    final inSeconds = commentedAtElapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
 
-                      commentedAtText = '$inHours:$inMinutes:$inSeconds';
-                    } else {
-                      final dateFormat = DateFormat('HH:mm:ss');
-                      commentedAtText = dateFormat.format(commentedAtDateTime.toLocal());
-                    }
-                    final commentedAt = SelectableText(commentedAtText);
+                    final commentedAtElapsedText = '$inHours:$inMinutes:$inSeconds';
+
+                    final dateTimeFormat = DateFormat('HH:mm:ss');
+                    final commentedAtDateTimeText = dateTimeFormat.format(commentedAtDateTime.toLocal());
+
+                    final fullDateTimeFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+                    final commentedAtFullDateTimeText = fullDateTimeFormat.format(commentedAtDateTime.toLocal());
+
+                    final commentedAt = Tooltip(
+                      message: 'コメントが投稿された時刻: $commentedAtFullDateTimeText\n番組開始からの経過時間: $commentedAtElapsedText',
+                      child: SelectableText((sharedPreferences!.getBool('commentTimeFormatElapsed') ?? false) ? commentedAtElapsedText : commentedAtDateTimeText)
+                    );
 
                     TextStyle? textStyle;
                     if (chatMessage is! NormalChatMessage) {
