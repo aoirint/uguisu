@@ -1,16 +1,13 @@
 # uguisu
 
-A new Flutter project.
+**THIS PROJECT IS IN THE EARLY DEVELOPMENT STAGE.**
 
-## Getting Started
+**USE AT YOUR OWN RISK.**
 
-This project is a starting point for a Flutter application.
+**MAYBE THERE ARE CRITICAL ISSUES ABOUT LOAD OR BAD REQUEST ON THIRDPARTY SERVERS, SECURITY, PERFORMANCE, DESIGN, ETC.**
 
-A few resources to get you started if this is your first Flutter project:
+Cross-OS Comment Viewer built on Flutter/Dart.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Supported services
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- ニコニコ生放送: <https://live.nicovideo.jp/>
