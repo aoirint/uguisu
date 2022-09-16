@@ -427,6 +427,20 @@ Future<void> saveLiveComment({
   await file.writeAsString(rawJson, encoding: utf8, flush: true);
 }
 
+class NiconicoLoginUserData with ChangeNotifier {
+  NiconicoUserPageCache? loginUserPageCache;
+  NiconicoUserIconCache? loginUserIconCache;
+
+  void setLoginUserData({
+    NiconicoUserPageCache? loginUserPageCache,
+    NiconicoUserIconCache? loginUserIconCache,
+  }) {
+    this.loginUserPageCache = loginUserPageCache;
+    this.loginUserIconCache = loginUserIconCache;
+    notifyListeners();
+  }
+}
+
 class MyApp extends StatelessWidget {
   final NiconicoLoginCookie? initialLoginCookie;
 
@@ -441,6 +455,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => NiconicoLoginCookieData(loginCookie: initialLoginCookie)),
+        ChangeNotifierProvider(create: (context) => NiconicoLoginUserData()),
       ],
       child: MaterialApp(
         title: 'Uguisu',
@@ -1195,6 +1210,14 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   @override
   Widget build(BuildContext context) {
     final loginCookieData = context.watch<NiconicoLoginCookieData>();
+    final loginUserData = context.watch<NiconicoLoginUserData>();
+
+    Future(() async {
+      if (loginCookieData.loginCookie != null && loginUserData.loginUserPageCache == null) {
+      }
+      if (loginCookieData.loginCookie != null && loginUserData.loginUserIconCache == null) {
+      }
+    });
 
     return Scaffold(
       body: Column(
