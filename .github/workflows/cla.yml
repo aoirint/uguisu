@@ -21,7 +21,7 @@ jobs:
           path-to-signatures: 'signatures/version1/cla.json'
           path-to-document: 'https://github.com/aoirint/uguisu/blob/main/CLA.md' # e.g. a CLA or a DCO document
           # branch should not be protected
-          branch: 'main'
+          branch: 'cla-assistant/update-signatures'
           # below are the optional inputs - If the optional inputs are not given, then default values will be taken
           # allowlist: user1,bot*
           # remote-organization-name: enter the remote organization name where the signatures should be stored (Default is storing the signatures in the same repository)
@@ -33,3 +33,12 @@ jobs:
           # custom-allsigned-prcomment: 'pull request comment when all contributors has signed, defaults to **CLA Assistant Lite bot** All Contributors have signed the CLA.'
           # lock-pullrequest-aftermerge: false - if you don't want this bot to automatically lock the pull request after merging (default - true)
           # use-dco-flag: true - If you are using DCO instead of CLA
+
+      - name: "Create Pull Request"
+        if: failure()
+        uses: peter-evans/create-pull-request@v4
+        with:
+          title: 'Update CLA signatures'
+          base: 'main'
+          branch: 'cla-assistant/update-signatures'
+          delete-branch: true
