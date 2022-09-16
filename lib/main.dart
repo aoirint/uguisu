@@ -1509,9 +1509,25 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   children: chatMessages.map((chatMessage) {
                     Widget icon = Container();
                     if (chatMessage is NormalChatMessage) {
-                      final iconBytes = chatMessage.commentUser?.userIconCache?.userIcon.iconBytes;
-                      if (iconBytes != null) {
-                        icon = Image.memory(iconBytes);
+                      final userIconCache = chatMessage.commentUser?.userIconCache;
+                      if (userIconCache != null) {
+                        final iconBytes = userIconCache.userIcon.iconBytes;
+
+                        icon = MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final iconPath = await getUserIconPath(userIconCache.userId);
+                              if (iconPath == null) return;
+
+                              await OpenFilex.open(iconPath);
+                            },
+                            child: Tooltip(
+                              message: 'アイコンの画像ファイルを開く',
+                              child: Image.memory(iconBytes),
+                            ),
+                          ),
+                        );
                       }
                     }
 
