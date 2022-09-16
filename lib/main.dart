@@ -16,6 +16,7 @@ import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 final mainLogger = Logger('main');
+NiconicoLiveSimpleClient? simpleClient;
 
 void main() async {
   Logger.root.level = Level.ALL;
@@ -48,11 +49,162 @@ void main() async {
   }
 
   final loginCookie = await loadLoginCookie(file: await getLoginCookiePath());
+  await initSimpleClient(loginCookie: loginCookie);
+
   runApp(MyApp(initialLoginCookie: loginCookie));
 }
 
 bool isDesktopEnvironment() {
   return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+}
+
+Future<void> initSimpleClient({
+  NiconicoLoginCookie? loginCookie,
+}) async {
+  const userAgent = 'uguisu/0.0.0';
+
+  simpleClient = NiconicoLiveSimpleClient(userAgent: userAgent);
+
+  Future<Uri> getUserPageUri(int userId) async {
+    // TODO: use local emulation server if not live.nicovideo.jp
+    return Uri.parse('https://www.nicovideo.jp/user/$userId');
+    // if (livePageUrl.startsWith('https://live.nicovideo.jp/watch/')) {
+    //   return Uri.parse('https://www.nicovideo.jp/user/$userId');
+    // }
+    // return Uri.parse('http://127.0.0.1:10083/user_page/$userId');
+  }
+
+  await simpleClient!.initialize(
+    loginCookie: loginCookie,
+    userIconLoadCacheOrNull: (userId) async {
+      final appSupportDir = await getApplicationSupportDirectory();
+      final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
+      if (! await userIconJsonFile.exists()) {
+        mainLogger.warning('Cache-miss for user/$userId. User icon json not exists');
+        return null;
+      }
+
+      final userIconRawJson = await userIconJsonFile.readAsString(encoding: utf8);
+      final userIconJson = jsonDecode(userIconRawJson);
+
+      if (userIconJson['version'] != '1') {
+        mainLogger.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
+        return null;
+      }
+
+      final userIdInJson = userIconJson['userId'];
+      if (userIdInJson != userId) {
+        throw Exception('Invalid user icon json. userId does not match. given: $userId, json: $userIdInJson');
+      }
+
+      final iconUri = Uri.parse(userIconJson['iconUri']);
+      final String contentType = userIconJson['contentType'];
+      final iconUploadedAt = userIconJson['iconUploadedAt'] != null ? DateTime.parse(userIconJson['iconUploadedAt']) : null;
+      final iconFetchedAt = DateTime.parse(userIconJson['iconFetchedAt']);
+      final String iconPath = userIconJson['iconPath'];
+
+      final iconFile = File(iconPath);
+      if (! await iconFile.exists()) {
+        mainLogger.warning('Unexpected cache-miss for user/$userId. User icon image not exists');
+        return null;
+      }
+
+      final iconBytes = await iconFile.readAsBytes();
+
+      return NiconicoUserIconCache(
+        userId: userId,
+        userIcon: NiconicoUserIcon(
+          iconUri: iconUri,
+          contentType: contentType,
+          iconBytes: iconBytes,
+        ),
+        iconUploadedAt: iconUploadedAt,
+        iconFetchedAt: iconFetchedAt,
+      );
+    },
+    userIconSaveCache: (userIcon) async {
+      final userId = userIcon.userId;
+      final contentType = userIcon.userIcon.contentType;
+
+      String? iconFileNameSuffix;
+      if (contentType == 'image/png') iconFileNameSuffix = '.png';
+      if (contentType == 'image/jpeg') iconFileNameSuffix = '.jpg';
+      if (contentType == 'image/gif') iconFileNameSuffix = '.gif';
+      if (iconFileNameSuffix == null) {
+        throw Exception('Unsupported content type: $contentType');
+      }
+
+      final appSupportDir = await getApplicationSupportDirectory();
+      final iconFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId$iconFileNameSuffix'));
+      await iconFile.parent.create(recursive: true);
+      await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
+
+      final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
+      final userIconRawJson = jsonEncode({
+        'version': '1',
+        'userId': userId,
+        'iconUri': userIcon.userIcon.iconUri.toString(),
+        'contentType': userIcon.userIcon.contentType,
+        'iconUploadedAt': userIcon.iconUploadedAt?.toIso8601String(),
+        'iconFetchedAt': userIcon.iconFetchedAt.toIso8601String(),
+        'iconPath': iconFile.path,
+      });
+
+      await userIconJsonFile.writeAsString(userIconRawJson, encoding: utf8, flush: true);
+    },
+    getUserPageUri: getUserPageUri,
+    userPageLoadCacheOrNull: (userId) async {
+      final appSupportDir = await getApplicationSupportDirectory();
+      final userPageJsonFile = File(path.join(appSupportDir.path, 'cache/user_page/$userId.json'));
+      if (! await userPageJsonFile.exists()) {
+        mainLogger.warning('Cache-miss for user/$userId. User page json not exists');
+        return null;
+      }
+
+      final userPageRawJson = await userPageJsonFile.readAsString(encoding: utf8);
+      final userPageJson = jsonDecode(userPageRawJson);
+
+      if (userPageJson['version'] != '1') {
+        mainLogger.warning('Unsupported user page json version. Ignore this: ${userPageJsonFile.path}');
+        return null;
+      }
+
+      final userIdInJson = userPageJson['userId'];
+      if (userIdInJson != userId) {
+        throw Exception('Invalid user page json. userId does not match. given: $userId, json: $userIdInJson');
+      }
+
+      final nickname = userPageJson['nickname'];
+      final iconUrl = userPageJson['iconUrl'];
+      final pageFetchedAt = DateTime.parse(userPageJson['pageFetchedAt']);
+
+      return NiconicoUserPageCache(
+        userId: userId,
+        userPage: NiconicoUserPage(
+          id: userId,
+          nickname: nickname,
+          iconUrl: iconUrl,
+        ),
+        pageFetchedAt: pageFetchedAt,
+      );
+    },
+    userPageSaveCache: (userPage) async {
+      final userId = userPage.userId;
+
+      final appSupportDir = await getApplicationSupportDirectory();
+      final userPageJsonFile = File(path.join(appSupportDir.path, 'cache/user_page/$userId.json'));
+      await userPageJsonFile.parent.create(recursive: true);
+      final userPageRawJson = jsonEncode({
+        'version': '1',
+        'userId': userId,
+        'nickname': userPage.userPage.nickname,
+        'iconUrl': userPage.userPage.iconUrl,
+        'pageFetchedAt': userPage.pageFetchedAt.toIso8601String(),
+      });
+
+      await userPageJsonFile.writeAsString(userPageRawJson, encoding: utf8, flush: true);
+    },
+  );
 }
 
 // Live Page
@@ -288,9 +440,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (context) => NiconicoLoginCookieData(loginCookie: initialLoginCookie),
-        ),
+        ChangeNotifierProvider(create: (context) => NiconicoLoginCookieData(loginCookie: initialLoginCookie)),
       ],
       child: MaterialApp(
         title: 'Uguisu',
@@ -833,7 +983,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   StatisticsMessage? statisticsMessage;
   List<BaseChatMessage> chatMessages = [];
 
-  NiconicoLiveSimpleClient? simpleClient;
   bool fetchAllRunning = false;
 
   final liveIdOrUrlTextController = TextEditingController(text: '');
@@ -923,10 +1072,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   }) {
     this.livePageUrl = livePageUrl;
 
-    const userAgent = 'uguisu/0.0.0';
-
     Future(() async {
-      await this.simpleClient?.stop();
+      await simpleClient?.stop();
       setState(() {
         livePage = null;
         scheduleMessage = null;
@@ -934,20 +1081,12 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         chatMessages.clear();
       });
 
-      final simpleClient = NiconicoLiveSimpleClient(userAgent: userAgent);
-      this.simpleClient = simpleClient;
-
-      Future<Uri> getUserPageUri(int userId) async {
-        if (livePageUrl.startsWith('https://live.nicovideo.jp/watch/')) {
-          return Uri.parse('https://www.nicovideo.jp/user/$userId');
-        }
-        return Uri.parse('http://127.0.0.1:10083/user_page/$userId');
-      }
-
       try {
-        await simpleClient.connect(
-          livePageUrl: livePageUrl,
+        await initSimpleClient(
           loginCookie: loginCookie,
+        );
+        await simpleClient!.connect(
+          livePageUrl: livePageUrl,
           onScheduleMessage: (scheduleMessage) {
             setState(() {
               this.scheduleMessage = scheduleMessage;
@@ -973,165 +1112,37 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               });
             });
           },
-          userIconLoadCacheOrNull: (userId) async {
-            final appSupportDir = await getApplicationSupportDirectory();
-            final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
-            if (! await userIconJsonFile.exists()) {
-              logger?.warning('Cache-miss for user/$userId. User icon json not exists');
-              return null;
-            }
-
-            final userIconRawJson = await userIconJsonFile.readAsString(encoding: utf8);
-            final userIconJson = jsonDecode(userIconRawJson);
-
-            if (userIconJson['version'] != '1') {
-              logger?.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
-              return null;
-            }
-
-            final userIdInJson = userIconJson['userId'];
-            if (userIdInJson != userId) {
-              throw Exception('Invalid user icon json. userId does not match. given: $userId, json: $userIdInJson');
-            }
-
-            final iconUri = Uri.parse(userIconJson['iconUri']);
-            final String contentType = userIconJson['contentType'];
-            final iconUploadedAt = userIconJson['iconUploadedAt'] != null ? DateTime.parse(userIconJson['iconUploadedAt']) : null;
-            final iconFetchedAt = DateTime.parse(userIconJson['iconFetchedAt']);
-            final String iconPath = userIconJson['iconPath'];
-
-            final iconFile = File(iconPath);
-            if (! await iconFile.exists()) {
-              logger?.warning('Unexpected cache-miss for user/$userId. User icon image not exists');
-              return null;
-            }
-
-            final iconBytes = await iconFile.readAsBytes();
-
-            return NiconicoUserIconCache(
-              userId: userId,
-              userIcon: NiconicoUserIcon(
-                iconUri: iconUri,
-                contentType: contentType,
-                iconBytes: iconBytes,
-              ),
-              iconUploadedAt: iconUploadedAt,
-              iconFetchedAt: iconFetchedAt,
-            );
-          },
-          userIconSaveCache: (userIcon) async {
-            final userId = userIcon.userId;
-            final contentType = userIcon.userIcon.contentType;
-
-            String? iconFileNameSuffix;
-            if (contentType == 'image/png') iconFileNameSuffix = '.png';
-            if (contentType == 'image/jpeg') iconFileNameSuffix = '.jpg';
-            if (contentType == 'image/gif') iconFileNameSuffix = '.gif';
-            if (iconFileNameSuffix == null) {
-              throw Exception('Unsupported content type: $contentType');
-            }
-
-            final appSupportDir = await getApplicationSupportDirectory();
-            final iconFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId$iconFileNameSuffix'));
-            await iconFile.parent.create(recursive: true);
-            await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
-
-            final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
-            final userIconRawJson = jsonEncode({
-              'version': '1',
-              'userId': userId,
-              'iconUri': userIcon.userIcon.iconUri.toString(),
-              'contentType': userIcon.userIcon.contentType,
-              'iconUploadedAt': userIcon.iconUploadedAt?.toIso8601String(),
-              'iconFetchedAt': userIcon.iconFetchedAt.toIso8601String(),
-              'iconPath': iconFile.path,
-            });
-
-            await userIconJsonFile.writeAsString(userIconRawJson, encoding: utf8, flush: true);
-          },
-          getUserPageUri: getUserPageUri,
-          userPageLoadCacheOrNull: (userId) async {
-            final appSupportDir = await getApplicationSupportDirectory();
-            final userPageJsonFile = File(path.join(appSupportDir.path, 'cache/user_page/$userId.json'));
-            if (! await userPageJsonFile.exists()) {
-              logger?.warning('Cache-miss for user/$userId. User page json not exists');
-              return null;
-            }
-
-            final userPageRawJson = await userPageJsonFile.readAsString(encoding: utf8);
-            final userPageJson = jsonDecode(userPageRawJson);
-
-            if (userPageJson['version'] != '1') {
-              logger?.warning('Unsupported user page json version. Ignore this: ${userPageJsonFile.path}');
-              return null;
-            }
-
-            final userIdInJson = userPageJson['userId'];
-            if (userIdInJson != userId) {
-              throw Exception('Invalid user page json. userId does not match. given: $userId, json: $userIdInJson');
-            }
-
-            final nickname = userPageJson['nickname'];
-            final iconUrl = userPageJson['iconUrl'];
-            final pageFetchedAt = DateTime.parse(userPageJson['pageFetchedAt']);
-
-            return NiconicoUserPageCache(
-              userId: userId,
-              userPage: NiconicoUserPage(
-                id: userId,
-                nickname: nickname,
-                iconUrl: iconUrl,
-              ),
-              pageFetchedAt: pageFetchedAt,
-            );
-          },
-          userPageSaveCache: (userPage) async {
-            final userId = userPage.userId;
-
-            final appSupportDir = await getApplicationSupportDirectory();
-            final userPageJsonFile = File(path.join(appSupportDir.path, 'cache/user_page/$userId.json'));
-            await userPageJsonFile.parent.create(recursive: true);
-            final userPageRawJson = jsonEncode({
-              'version': '1',
-              'userId': userId,
-              'nickname': userPage.userPage.nickname,
-              'iconUrl': userPage.userPage.iconUrl,
-              'pageFetchedAt': userPage.pageFetchedAt.toIso8601String(),
-            });
-
-            await userPageJsonFile.writeAsString(userPageRawJson, encoding: utf8, flush: true);
-          },
         );
         
-        final liveUserId = int.parse(simpleClient.livePage!.program.supplier.programProviderId);
-        final livePageSupplierUserPageCache = await simpleClient.userPageCacheClient!.loadOrFetchUserPage(userId: liveUserId, userPageUri: await getUserPageUri(liveUserId));
-        final livePageSupplierUserIconCache = await simpleClient.userIconCacheClient!.loadOrFetchIcon(userId: liveUserId, iconUri: Uri.parse(livePageSupplierUserPageCache.userPage.iconUrl));
+        final liveUserId = int.parse(simpleClient!.livePage!.program.supplier.programProviderId);
+        final livePageSupplierUserPageCache = await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: liveUserId, userPageUri: await simpleClient!.getUserPageUri!.call(liveUserId));
+        final livePageSupplierUserIconCache = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(userId: liveUserId, iconUri: Uri.parse(livePageSupplierUserPageCache.userPage.iconUrl));
 
         await saveLivePage(
-          livePage: simpleClient.livePage!,
+          livePage: simpleClient!.livePage!,
           file: await getLivePageCachePath(
-            communityId: simpleClient.livePage!.socialGroup.id,
-            liveId: simpleClient.livePage!.program.nicoliveProgramId,
+            communityId: simpleClient!.livePage!.socialGroup.id,
+            liveId: simpleClient!.livePage!.program.nicoliveProgramId,
           ),
         );
 
         setState(() {
-          livePage = simpleClient.livePage;
+          livePage = simpleClient!.livePage;
           this.livePageSupplierUserPageCache = livePageSupplierUserPageCache;
           this.livePageSupplierUserIconCache = livePageSupplierUserIconCache;
         });
 
         final liveComment = await loadLiveComment(
           file: await getLiveCommentCachePath(
-            communityId: simpleClient.livePage!.socialGroup.id,
-            liveId: simpleClient.livePage!.program.nicoliveProgramId,
+            communityId: simpleClient!.livePage!.socialGroup.id,
+            liveId: simpleClient!.livePage!.program.nicoliveProgramId,
           ),
         );
         if (liveComment != null) {
           final chatMessages = <BaseChatMessage>[];
           for (final room in liveComment.rooms) {
             for (final chatMessage in room.chatMessages) {
-              var cm = simpleClient.parseChatMessage(chatMessage);
+              var cm = simpleClient!.parseChatMessage(chatMessage);
               if (cm is LazyNormalChatMessage) {
                 cm = await cm.resolve();
               }

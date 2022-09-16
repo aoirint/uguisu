@@ -42,17 +42,7 @@ Future<void> main(List<String> args) async {
       var chatMessages = [];
       var nextChatMessageIndex = 0;
 
-      await simpleClient.connect(
-        livePageUrl: livePageUrl, // for test: http://127.0.0.1:10080, for real case: https://live.nicovideo.jp/watch/lv000000000
-        onScheduleMessage: (scheduleMessage) {
-          logger.info('Schedule | begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
-        },
-        onStatisticsMessage: (statisticsMessage) {
-          logger.info('Statistics | viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
-        },
-        onChatMessage: (chatMessage) {
-          chatMessages.add(chatMessage);
-        },
+      await simpleClient.initialize(
         userIconLoadCacheOrNull: (userId) async {
           final userIconJsonFile = File('cache/user_icon/$userId.json');
           if (! await userIconJsonFile.exists()) {
@@ -176,6 +166,19 @@ Future<void> main(List<String> args) async {
           });
 
           await userPageJsonFile.writeAsString(userPageRawJson, encoding: utf8, flush: true);
+        },
+      );
+
+      await simpleClient.connect(
+        livePageUrl: livePageUrl, // for test: http://127.0.0.1:10080, for real case: https://live.nicovideo.jp/watch/lv000000000
+        onScheduleMessage: (scheduleMessage) {
+          logger.info('Schedule | begin=${scheduleMessage.begin}, end=${scheduleMessage.end}');
+        },
+        onStatisticsMessage: (statisticsMessage) {
+          logger.info('Statistics | viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
+        },
+        onChatMessage: (chatMessage) {
+          chatMessages.add(chatMessage);
         },
       );
 
