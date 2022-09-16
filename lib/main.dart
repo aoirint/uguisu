@@ -522,14 +522,17 @@ class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Icon(Icons.arrow_back),
+                  child: Tooltip(
+                    message: '前の画面に戻る',
+                    child: ElevatedButton(
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Icon(Icons.arrow_back),
+                      ),
+                      onPressed: () async {
+                        Navigator.popUntil(context, ModalRoute.withName('/'));
+                      },
                     ),
-                    onPressed: () async {
-                      Navigator.popUntil(context, ModalRoute.withName('/'));
-                    },
                   ),
                 ),
                 const Expanded(
@@ -794,14 +797,17 @@ class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Icon(Icons.arrow_back),
+                  child: Tooltip(
+                    message: '前の画面に戻る',
+                    child: ElevatedButton(
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Icon(Icons.arrow_back),
+                      ),
+                      onPressed: () async {
+                        Navigator.popUntil(context, ModalRoute.withName('/config'));
+                      },
                     ),
-                    onPressed: () async {
-                      Navigator.popUntil(context, ModalRoute.withName('/config'));
-                    },
                   ),
                 ),
                 const Padding(
@@ -919,17 +925,20 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Icon(Icons.arrow_back),
-                    ),
-                    onPressed: () async {
-                      otpTextController.clear();
-                      deviceNameTextController.clear();
+                  child: Tooltip(
+                    message: '前の画面に戻る',
+                    child: ElevatedButton(
+                      child: const Padding(
+                        padding: EdgeInsets.all(6.0),
+                        child: Icon(Icons.arrow_back),
+                      ),
+                      onPressed: () async {
+                        otpTextController.clear();
+                        deviceNameTextController.clear();
 
-                      context.read<NiconicoLoginResultData>().setLoginResult(null);
-                    },
+                        context.read<NiconicoLoginResultData>().setLoginResult(null);
+                      },
+                    ),
                   ),
                 ),
                 const Padding(
