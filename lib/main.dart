@@ -1342,7 +1342,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   Padding(
                     padding: const EdgeInsets.all(8.0), 
                     child: Tooltip(
-                      message: '接続',
+                      message: '番組に接続',
                       child: ElevatedButton(
                         onPressed: () {
                           final livePageIdOrUrl = liveIdOrUrlTextController.text;
