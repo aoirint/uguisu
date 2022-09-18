@@ -497,6 +497,27 @@ class NiconicoLoginUserData with ChangeNotifier {
   }
 }
 
+class NiconicoLoginCookie {
+  final SweetCookieJar cookieJar;
+  final String userId;
+
+  NiconicoLoginCookie({
+    required this.cookieJar,
+    required this.userId,
+  });
+}
+
+class NiconicoLoginCookieData with ChangeNotifier {
+  NiconicoLoginCookie? loginCookie;
+
+  NiconicoLoginCookieData({this.loginCookie});
+
+  void setLoginCookie({NiconicoLoginCookie? loginCookie}) {
+    this.loginCookie = loginCookie;
+    notifyListeners();
+  }
+}
+
 class MyApp extends StatelessWidget {
   final NiconicoLoginCookie? initialLoginCookie;
 
@@ -778,42 +799,43 @@ Future<void> saveLoginCookie({
   await file.writeAsString(rawJson, encoding: utf8);
 }
 
-class NiconicoLoginCookie {
-  final SweetCookieJar cookieJar;
-  final String userId;
+class SimpleNiconicoLoginResolver with NiconicoLoginResolver {
+  @override
+  Future<NiconicoLoginResult?> resolveLogin({required String mailTel, required String password}) async {
+    const userAgent = 'uguisu/0.0.0';
 
-  NiconicoLoginCookie({
-    required this.cookieJar,
-    required this.userId,
+    final loginResult = await NiconicoLoginClient().login(
+      uri: Uri.parse('https://account.nicovideo.jp/login/redirector?site=niconico&next_url=%2F'), // site, next_url is required for user-id fetching; redirected to https://www.nicovideo.jp/ after MFA
+      mailTel: mailTel,
+      password: password,
+      userAgent: userAgent,
+    );
+
+    return loginResult;
+  }
+}
+
+class SimpleNiconicoMfaLoginResolver with NiconicoMfaLoginResolver {
+  final NiconicoLoginResult loginResult;
+
+  SimpleNiconicoMfaLoginResolver({
+    required this.loginResult,
   });
-}
 
-class NiconicoLoginCookieData with ChangeNotifier {
-  NiconicoLoginCookie? loginCookie;
+  @override
+  Future<NiconicoMfaLoginResult?> resolveMfaLogin({required String otp, required String deviceName}) async {
+    const userAgent = 'uguisu/0.0.0';
 
-  NiconicoLoginCookieData({this.loginCookie});
+    final mfaLoginResult = await NiconicoLoginClient().mfaLogin(
+      mfaFormActionUri: loginResult.mfaFormActionUri!,
+      cookieJar: loginResult.cookieJar,
+      otp: otp,
+      deviceName: deviceName,
+      isMfaTrustedDevice: true,
+      userAgent: userAgent,
+    );
 
-  void setLoginCookie({NiconicoLoginCookie? loginCookie}) {
-    this.loginCookie = loginCookie;
-    notifyListeners();
-  }
-}
-
-class NiconicoLoginResultData with ChangeNotifier {
-  NiconicoLoginResult? loginResult;
-
-  void setLoginResult(NiconicoLoginResult? loginResult) {
-    this.loginResult = loginResult;
-    notifyListeners();
-  }
-}
-
-class NiconicoMfaLoginResultData with ChangeNotifier {
-  NiconicoMfaLoginResult? mfaLoginResult;
-
-  void setMfaLoginResult(NiconicoMfaLoginResult? mfaLoginResult) {
-    this.mfaLoginResult = mfaLoginResult;
-    notifyListeners();
+    return mfaLoginResult;
   }
 }
 
@@ -822,297 +844,30 @@ class NiconicoLoginWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => NiconicoLoginResultData()),
-        ChangeNotifierProvider(create: (context) => NiconicoMfaLoginResultData()),
-      ],
-      child: const NiconicoLoginSwitchWidget(),
+    return NiconicoLoginSwitchDialog(
+      loginResolver: SimpleNiconicoLoginResolver(),
+      mfaLoginResolverBuilder: ({required loginResult}) => SimpleNiconicoMfaLoginResolver(loginResult: loginResult),
+      onLoginResult: ({required loginResult}) async {
+        final loginCookie = NiconicoLoginCookie(cookieJar: loginResult.cookieJar, userId: loginResult.userId!);
+        context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
+        await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.popUntil(context, ModalRoute.withName('/config'));
+        });
+      },
+      onMfaLoginResult: ({required mfaLoginResult}) async {
+        final loginCookie = NiconicoLoginCookie(cookieJar: mfaLoginResult.cookieJar, userId: mfaLoginResult.userId);
+        context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
+        await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.popUntil(context, ModalRoute.withName('/config'));
+        });
+      },
     );
   }
 }
-
-class NiconicoLoginSwitchWidget extends StatelessWidget {
-  const NiconicoLoginSwitchWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final loginResult = context.watch<NiconicoLoginResultData>().loginResult;
-    final mfaLoginResult = context.watch<NiconicoMfaLoginResultData>().mfaLoginResult;
-
-    if (loginResult == null) {
-      return const NiconicoNormalLoginWidget();
-    }
-
-    if (loginResult.mfaRequired && mfaLoginResult == null) {
-      return const NiconicoMfaLoginWidget();
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.popUntil(context, ModalRoute.withName('/config'));
-    });
-
-    return Column();
-  }
-}
-
-class NiconicoNormalLoginWidget extends StatefulWidget {
-  const NiconicoNormalLoginWidget({super.key});
-
-  @override
-  State<NiconicoNormalLoginWidget> createState() => _NiconicoNormalLoginWidgetState();
-}
-
-class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
-  final mailTelTextController = TextEditingController(text: '');
-  final passwordTextController = TextEditingController(text: '');
-
-  Logger? logger;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final logger = Logger('_NiconicoNormalLoginWidgetState');
-    this.logger = logger;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Tooltip(
-                    message: '前の画面に戻る',
-                    child: ElevatedButton(
-                      child: const Padding(
-                        padding: EdgeInsets.all(6.0),
-                        child: Icon(Icons.arrow_back),
-                      ),
-                      onPressed: () async {
-                        Navigator.popUntil(context, ModalRoute.withName('/config'));
-                      },
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('ニコニコ動画アカウントにログイン', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
-                ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: TextField(
-                controller: mailTelTextController,
-                style: const TextStyle(fontSize: 16.0),
-                enabled: true,
-                maxLines: 1,
-                decoration: const InputDecoration(
-                  labelText: 'メールアドレスまたは電話番号',
-                  contentPadding: EdgeInsets.all(4.0),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: TextField(
-                controller: passwordTextController,
-                style: const TextStyle(fontSize: 16.0),
-                enabled: true,
-                maxLines: 1,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'パスワード',
-                  contentPadding: EdgeInsets.all(4.0),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Text('ログイン', style: TextStyle(fontSize: 16.0)),
-                    ),
-                    onPressed: () async {
-                      const userAgent = 'uguisu/0.0.0';
-                      final mailTel = mailTelTextController.text;
-                      final password = passwordTextController.text;
-
-                      final loginResult = await NiconicoLoginClient().login(
-                        uri: Uri.parse('https://account.nicovideo.jp/login/redirector?site=niconico&next_url=%2F'), // site, next_url is required for user-id fetching; redirected to https://www.nicovideo.jp/ after MFA
-                        mailTel: mailTel,
-                        password: password,
-                        userAgent: userAgent,
-                      );
-
-                      if (mounted) {
-                        context.read<NiconicoLoginResultData>().setLoginResult(loginResult);
-
-                        if (! loginResult.mfaRequired) {
-                          final loginCookie = NiconicoLoginCookie(cookieJar: loginResult.cookieJar, userId: loginResult.userId!);
-                          context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
-                          await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
-                        }
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class NiconicoMfaLoginWidget extends StatefulWidget {
-  const NiconicoMfaLoginWidget({
-    super.key,
-  });
-
-  @override
-  State<NiconicoMfaLoginWidget> createState() => _NiconicoMfaLoginWidgetState();
-}
-
-class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
-  final otpTextController = TextEditingController(text: '');
-  final deviceNameTextController = TextEditingController(text: 'Uguisu');
-
-  Logger? logger;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final logger = Logger('main');
-    this.logger = logger;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final loginResult = context.watch<NiconicoLoginResultData>().loginResult;
-
-    return Scaffold(
-      body: loginResult == null ? Column() : Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Tooltip(
-                    message: '前の画面に戻る',
-                    child: ElevatedButton(
-                      child: const Padding(
-                        padding: EdgeInsets.all(6.0),
-                        child: Icon(Icons.arrow_back),
-                      ),
-                      onPressed: () async {
-                        otpTextController.clear();
-                        deviceNameTextController.clear();
-
-                        context.read<NiconicoLoginResultData>().setLoginResult(null);
-                      },
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('確認コードの入力', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
-                ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: TextField(
-                controller: otpTextController,
-                style: const TextStyle(fontSize: 16.0),
-                enabled: true,
-                maxLines: 1,
-                decoration: const InputDecoration(
-                  labelText: '確認コード',
-                  contentPadding: EdgeInsets.all(4.0),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: TextField(
-                controller: deviceNameTextController,
-                style: const TextStyle(fontSize: 16.0),
-                enabled: true,
-                maxLines: 1,
-                decoration: const InputDecoration(
-                  labelText: 'デバイス名',
-                  contentPadding: EdgeInsets.all(4.0),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Text('ログイン', style: TextStyle(fontSize: 16.0)),
-                    ),
-                    onPressed: () async {
-                      const userAgent = 'uguisu/0.0.0';
-                      final otp = otpTextController.text;
-                      final deviceName = deviceNameTextController.text;
-
-                      final mfaLoginResult = await NiconicoLoginClient().mfaLogin(
-                        mfaFormActionUri: loginResult.mfaFormActionUri!,
-                        cookieJar: loginResult.cookieJar,
-                        otp: otp,
-                        deviceName: deviceName,
-                        isMfaTrustedDevice: true,
-                        userAgent: userAgent,
-                      );
-
-                      otpTextController.clear();
-                      deviceNameTextController.clear();
-
-                      if (mounted) {
-                        context.read<NiconicoMfaLoginResultData>().setMfaLoginResult(mfaLoginResult);
-
-                        final loginCookie = NiconicoLoginCookie(cookieJar: mfaLoginResult.cookieJar, userId: mfaLoginResult.userId);
-                        context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
-                        await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 
 // 差分を抑えるための、現状の実装を流用した仮置きの定義。多少非効率なことを許容する
 class SimpleNiconicoUserIconImageBytesResolver with NiconicoUserIconImageBytesResolver {
