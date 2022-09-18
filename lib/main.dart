@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
+import 'package:logging/logging.dart' as logging;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
@@ -11,12 +14,15 @@ import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:collection/collection.dart';
+import 'package:uguisu/api/niconico/niconico_resolver.dart';
+import 'package:uguisu/widgets/niconico_live_header.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:open_filex/open_filex.dart';
 
-final mainLogger = Logger('main');
+final mainLogger = Logger('com.aoirint.uguisu');
+
 NiconicoLiveSimpleClient? simpleClient;
 SharedPreferences? sharedPreferences;
 
@@ -31,6 +37,8 @@ const commentTableTimeWidthDefaultValue = 72.0;
 const commentTableRowHeightDefaultValue = 37.0;
 
 void main() async {
+  logging.hierarchicalLoggingEnabled = true;
+
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) { 
     print('${record.loggerName}: ${record.level.name}: ${record.time}: ${record.message}');
@@ -1108,6 +1116,41 @@ class _NiconicoMfaLoginWidgetState extends State<NiconicoMfaLoginWidget> {
   }
 }
 
+
+// 差分を抑えるための、現状の実装を流用した仮置きの定義。多少非効率なことを許容する
+class SimpleNiconicoUserIconImageBytesResolver with NiconicoUserIconImageBytesResolver {
+  @override
+  Future<Uint8List>? resolveUserIconImageBytes({required int userId}) async {
+    final userPage = await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: userId, userPageUri: Uri.parse('https://www.nicovideo.jp/user/$userId'));
+    final userIcon = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(userId: userId, iconUri: Uri.parse(userPage.userPage.iconUrl));
+
+    return userIcon.userIcon.iconBytes;
+  }
+}
+
+class SimpleNiconicoLocalCachedUserIconImageFileResolver with NiconicoLocalCachedUserIconImageFileResolver {
+  @override
+  Future<File?> resolveLocalCachedUserIconImageFile({required int userId}) async {
+    final iconPath = await getUserIconPath(userId);
+    return iconPath != null ? File(iconPath) : null;
+  }
+}
+
+class SimpleNiconicoUserPageUriResolver with NiconicoUserPageUriResolver {
+  @override
+  Future<Uri?> resolveUserPageUri({required int userId}) async {
+    return Uri.parse('https://www.nicovideo.jp/user/$userId');
+  }
+}
+
+class SimpleNiconicoCommunityPageUriResolver with NiconicoCommunityPageUriResolver {
+  @override
+  Future<Uri?> resolveCommunityPageUri({required String communityId}) async {
+    return Uri.parse('https://com.nicovideo.jp/community/$communityId');
+  }
+}
+
+
 class NiconicoLivePageWidget extends StatefulWidget {
   const NiconicoLivePageWidget({
     super.key,
@@ -1473,117 +1516,19 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               ),
             ],
           ),
-          livePage == null ? Container() : Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () async {
-                      if (livePageSupplierUserPageCache == null) return;
-
-                      final iconPath = await getUserIconPath(livePageSupplierUserPageCache!.userId);
-                      if (iconPath == null) return;
-
-                      await OpenFilex.open(iconPath);
-                    },
-                    child: Tooltip(
-                      message: 'アイコンの画像ファイル（キャッシュ）を開く',
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 64.0,
-                            height: 64.0,
-                            child: FittedBox(child: livePageSupplierUserIconCache != null ? Image.memory(livePageSupplierUserIconCache!.userIcon.iconBytes) : const Icon(Icons.account_box)),
-                            // child: FittedBox(child: Icon(Icons.account_box)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 4.0),
-                    child: Tooltip(
-                      message: '放送ページを開く\nID: ${livePage!.program.nicoliveProgramId}',
-                      child: Text.rich(
-                        TextSpan(
-                          text: livePage!.program.title,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          mouseCursor: SystemMouseCursors.click,
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              final url = livePageUrl!;
-                              if (!await launchUrlString(url)) {
-                                throw Exception('Failed to open URL: $url');
-                              }
-                            },
-                        ),
-                      ),
-                    ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
-                        child: Tooltip(
-                          message: '放送者のユーザーページを開く\nID: ${livePage!.program.supplier.programProviderId}',
-                          child: Text.rich(
-                            TextSpan(
-                              text: livePage!.program.supplier.name,
-                              style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                              mouseCursor: SystemMouseCursors.click,
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () async {
-                                  final url = 'https://www.nicovideo.jp/user/${livePage!.program.supplier.programProviderId}';
-                                  if (!await launchUrlString(url)) {
-                                    throw Exception('Failed to open URL: $url');
-                                  }
-                                },
-                            ),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
-                        child: Tooltip(
-                          message: '放送中のコミュニティページを開く\nID: ${livePage!.socialGroup.id}',
-                          child: Text.rich(
-                            TextSpan(
-                              text: livePage!.socialGroup.name,
-                              style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                              mouseCursor: SystemMouseCursors.click,
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () async {
-                                  final url = 'https://com.nicovideo.jp/community/${livePage!.socialGroup.id}';
-                                  if (!await launchUrlString(url)) {
-                                    throw Exception('Failed to open URL: $url');
-                                  }
-                                },
-                            ),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
-                        child: Text('開始 ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.fromMillisecondsSinceEpoch(livePage!.program.beginTime * 1000, isUtc: true).toLocal())}')
-                      ),
-                      // Padding(
-                      //   padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
-                      //   child: Text('終了 ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.fromMillisecondsSinceEpoch(livePage!.program.endTime * 1000, isUtc: true).toLocal())}')
-                      // ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
+          livePage == null ? Container() : NiconicoLiveHeader(
+            livePageUrl: livePageUrl!,
+            liveId: livePage!.program.nicoliveProgramId,
+            liveTitle: livePage!.program.title,
+            liveBeginDateTime: DateTime.fromMillisecondsSinceEpoch(livePage!.program.beginTime * 1000, isUtc: true),
+            userIconImageBytesResolver: SimpleNiconicoUserIconImageBytesResolver(),
+            userLocalCachedIconImageFileResolver: SimpleNiconicoLocalCachedUserIconImageFileResolver(),
+            userPageUriResolver: SimpleNiconicoUserPageUriResolver(),
+            communityPageUriResolver: SimpleNiconicoCommunityPageUriResolver(),
+            supplierUserId: int.parse(livePage!.program.supplier.programProviderId),
+            supplierUserName: livePage!.program.supplier.name,
+            supplierCommunityId: livePage!.socialGroup.id,
+            supplierCommunityName: livePage!.socialGroup.name,
           ),
           Expanded(
             child: Padding(
