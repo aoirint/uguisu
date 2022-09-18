@@ -270,12 +270,15 @@ Future<NiconicoLivePage?> loadLivePage({
   final rawJson = await file.readAsString(encoding: utf8);
   final json = jsonDecode(rawJson);
 
-  if (json['version'] != '1') {
+  if (json['version'] != '2') {
     mainLogger.warning('Unsupported live page cache json version. Ignore this: ${file.path}');
     return null;
   }
 
   final webSocketUrl = json['webSocketUrl'];
+
+  final userProgramWatch = json['userProgramWatch'];
+  final userProgramWatchRejectedReasons = userProgramWatch['rejectedReasons'];
 
   final program = json['program'];
   final programTitle = program['title'];
@@ -312,6 +315,9 @@ Future<NiconicoLivePage?> loadLivePage({
       id: socialGroupId,
       name: socialGroupName,
     ),
+    userProgramWatch: NiconicoLivePageUserProgramWatch(
+      rejectedReasons: userProgramWatchRejectedReasons,
+    ),
   );
 }
 
@@ -320,7 +326,7 @@ Future<void> saveLivePage({
   required File file,
 }) async {
   final rawJson = jsonEncode({
-    'version': '1',
+    'version': '2',
     'webSocketUrl': livePage.webSocketUrl,
     'program': {
       'title': livePage.program.title,
@@ -334,6 +340,9 @@ Future<void> saveLivePage({
     'socialGroup': {
       'id': livePage.socialGroup.id,
       'name': livePage.socialGroup.name,
+    },
+    'userProgramWatch': {
+      'rejectedReasons': livePage.userProgramWatch.rejectedReasons,
     },
   });
 

@@ -26,6 +26,14 @@ class NiconicoLivePageProgramSupplier {
   });
 }
 
+class NiconicoLivePageUserProgramWatch {
+  List<String> rejectedReasons;
+
+  NiconicoLivePageUserProgramWatch({
+    required this.rejectedReasons,
+  });
+}
+
 class NiconicoLivePageProgram {
   String title;
   String nicoliveProgramId;
@@ -50,11 +58,13 @@ class NiconicoLivePage {
   String webSocketUrl;
   NiconicoLivePageProgram program;
   NiconicoLivePageSocialGroup socialGroup;
+  NiconicoLivePageUserProgramWatch userProgramWatch;
 
   NiconicoLivePage({
     required this.webSocketUrl,
     required this.program,
     required this.socialGroup,
+    required this.userProgramWatch,
   });
 }
 
@@ -112,6 +122,9 @@ class NiconicoLivePageClient {
     final socialGroupId = socialGroup['id'];
     final socialGroupName = socialGroup['name'];
 
+    final userProgramWatch = props['userProgramWatch'];
+    final userProgramWatchRejectedReasons = List<dynamic>.of(userProgramWatch['rejectedReasons']).map((e) => e.toString()).toList(); // empty list List<dynamic> to List<String>
+
     return NiconicoLivePage(
       webSocketUrl: webSocketUrl,
       program: NiconicoLivePageProgram(
@@ -129,6 +142,9 @@ class NiconicoLivePageClient {
       socialGroup: NiconicoLivePageSocialGroup(
         id: socialGroupId,
         name: socialGroupName,
+      ),
+      userProgramWatch: NiconicoLivePageUserProgramWatch(
+        rejectedReasons: userProgramWatchRejectedReasons,
       ),
     );
   }
