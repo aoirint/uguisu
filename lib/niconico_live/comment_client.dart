@@ -43,6 +43,7 @@ class NiconicoLiveCommentClient {
   Isolate? pingTimingIsolate;
   Duration pingInterval;
   Function(ChatMessage chatMessage)? onChatMessage;
+  Function(int rvalue)? onRFrameClosed;
   late Logger logger;
 
   NiconicoLiveCommentClient({
@@ -58,6 +59,7 @@ class NiconicoLiveCommentClient {
     String? threadkey,
     String? userId,
     required Function(ChatMessage chatMessage) onChatMessage,
+    Function(int rvalue)? onRFrameClosed,
   }) async {
     logger.info('connect to $websocketUrl');
 
@@ -147,6 +149,7 @@ class NiconicoLiveCommentClient {
     ));
 
     this.onChatMessage = onChatMessage;
+    this.onRFrameClosed = onRFrameClosed;
   }
 
   Future<void> stop() async {
@@ -168,6 +171,15 @@ class NiconicoLiveCommentClient {
     final Map<String, dynamic> message = jsonDecode(rawMessage);
     
     if (message.containsKey('ping')) {
+      final Map<String, dynamic> ping = message['ping'];
+      final content = ping['content'];
+
+      // R frame finished
+      final match = RegExp(r'rf:(\d+)').firstMatch(content);
+      if (match != null) {
+        final rvalue = int.parse(match.group(1)!);
+        onRFrameClosed?.call(rvalue);
+      }
     }
 
     if (message.containsKey('thread')) {

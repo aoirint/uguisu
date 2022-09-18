@@ -24,6 +24,12 @@ const windowOpacityDefaultValue = 1.0;
 const alwaysOnTopDefaultValue = false;
 const commentTimeFormatElapsedDefaultValue = false;
 
+const commentTableNoWidthDefaultValue = 50.0;
+const commentTableUserIconWidthDefaultValue = 35.0;
+const commentTableUserNameWidthDefaultValue = 260.0;
+const commentTableTimeWidthDefaultValue = 64.0;
+const commentTableRowHeightDefaultValue = 37.0;
+
 void main() async {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) { 
@@ -1126,6 +1132,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   bool fetchAllRunning = false;
 
   final liveIdOrUrlTextController = TextEditingController(text: '');
+  final chatMessageListScrollController = ScrollController();
 
   Logger? logger;
 
@@ -1154,8 +1161,18 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
     nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
 
+    // ListViewの個数が変わる前にatBottomを検査
+    final isScrollEnd = chatMessageListScrollController.position.atEdge && chatMessageListScrollController.position.pixels != 0;
+
     setState(() {
       this.chatMessages = nextChatMessages;
+    });
+
+    // ListViewの個数が変わってから末尾までスクロール
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (isScrollEnd) {
+        chatMessageListScrollController.jumpTo(chatMessageListScrollController.position.maxScrollExtent);
+      }
     });
 
     final rooms = <NiconicoLiveRoom>[];
@@ -1253,6 +1270,16 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               });
             });
           },
+          onRFrameClosed: (rvalue) {
+            // On first frame fetched
+            logger?.info('R frame $rvalue closed');
+
+            if (rvalue == 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                chatMessageListScrollController.jumpTo(chatMessageListScrollController.position.maxScrollExtent);
+              });
+            }
+          }
         );
         
         final liveUserId = int.parse(simpleClient!.livePage!.program.supplier.programProviderId);
@@ -1550,117 +1577,153 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(0.0),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                reverse: true,
-                child: Table(
-                  border: TableBorder.all(),
-                  columnWidths: const <int, TableColumnWidth>{
-                    0: IntrinsicColumnWidth(), // no
-                    1: FixedColumnWidth(32), // icon
-                    2: IntrinsicColumnWidth(), // name
-                    3: IntrinsicColumnWidth(), // time
-                    4: FlexColumnWidth(), // content
-                  },
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: chatMessages.map((chatMessage) {
-                    Widget icon = Container();
-                    if (chatMessage is NormalChatMessage) {
-                      final userIconCache = chatMessage.commentUser?.userIconCache;
-                      if (userIconCache != null) {
-                        final iconBytes = userIconCache.userIcon.iconBytes;
+              child: ListView.builder(
+                controller: chatMessageListScrollController,
+                itemCount: chatMessages.length,
+                itemExtent: commentTableRowHeightDefaultValue,
+                itemBuilder: (context, index) {
+                  final chatMessage = chatMessages[index];
 
-                        icon = MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () async {
-                              final iconPath = await getUserIconPath(userIconCache.userId);
-                              if (iconPath == null) return;
+                  Widget icon = Container();
+                  if (chatMessage is NormalChatMessage) {
+                    final userIconCache = chatMessage.commentUser?.userIconCache;
+                    if (userIconCache != null) {
+                      final iconBytes = userIconCache.userIcon.iconBytes;
 
-                              await OpenFilex.open(iconPath);
-                            },
-                            child: Tooltip(
-                              message: 'アイコンの画像ファイルを開く',
-                              child: Image.memory(iconBytes),
+                      icon = MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () async {
+                            final iconPath = await getUserIconPath(userIconCache.userId);
+                            if (iconPath == null) return;
+
+                            await OpenFilex.open(iconPath);
+                          },
+                          child: Tooltip(
+                            message: 'アイコンの画像ファイルを開く',
+                            child: Image.memory(iconBytes),
+                          ),
+                        ),
+                      );
+                    }
+                  }
+
+                  Widget name = Container();
+                  if (chatMessage is NormalChatMessage) {
+                    final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
+                    final userId = chatMessage.chatMessage.userId;
+                    if (nickname != null) {
+                      name = Tooltip(
+                        message: 'ID: $userId',
+                          child: SelectableText.rich(
+                          TextSpan(
+                            text: nickname,
+                            style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                            mouseCursor: SystemMouseCursors.click,
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () async {
+                                final url = 'https://www.nicovideo.jp/user/$userId';
+                                if (!await launchUrlString(url)) {
+                                  throw Exception('Failed to open URL: $url');
+                                }
+                              },
+                          ),
+                        ),
+                      );
+                    } else {
+                      name = SelectableText(userId);
+                    }
+                  }
+
+                  final commentedAtDateTime = DateTime.fromMicrosecondsSinceEpoch(chatMessage.chatMessage.date * 1000 * 1000 + chatMessage.chatMessage.dateUsec, isUtc: true);
+                  final commentedAtDuration = Duration(microseconds: commentedAtDateTime.microsecondsSinceEpoch);
+                  final liveBeginTimeDuration = Duration(seconds: livePage!.program.beginTime);
+                  final commentedAtElapsed = commentedAtDuration - liveBeginTimeDuration;
+
+                  final inHours = commentedAtElapsed.inHours;
+                  final inMinutes = commentedAtElapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
+                  final inSeconds = commentedAtElapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+                  final commentedAtElapsedText = '$inHours:$inMinutes:$inSeconds';
+
+                  final dateTimeFormat = DateFormat('HH:mm:ss');
+                  final commentedAtDateTimeText = dateTimeFormat.format(commentedAtDateTime.toLocal());
+
+                  final fullDateTimeFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+                  final commentedAtFullDateTimeText = fullDateTimeFormat.format(commentedAtDateTime.toLocal());
+
+                  final commentedAt = Tooltip(
+                    message: 'コメントが投稿された時刻: $commentedAtFullDateTimeText\n番組開始からの経過時間: $commentedAtElapsedText',
+                    child: SelectableText(
+                      (sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue) ? commentedAtElapsedText : 
+                        commentedAtDateTimeText)
+                  );
+
+                  TextStyle? textStyle;
+                  if (chatMessage is! NormalChatMessage) {
+                    // 0x727272
+                    // 0xFF0033
+                    textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
+                  }
+                  final content = SelectableText(
+                    chatMessage.chatMessage.content,
+                    style: textStyle,
+                  );
+
+                  return IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          alignment: Alignment.centerLeft,
+                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
+                          child: SizedBox(
+                            width: sharedPreferences!.getDouble('commentTableNoWidth') ?? commentTableNoWidthDefaultValue,
+                            child: Container(
+                              alignment: Alignment.centerRight, 
+                              child: Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
                             ),
                           ),
-                        );
-                      }
-                    }
-
-                    Widget name = Container();
-                    if (chatMessage is NormalChatMessage) {
-                      final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
-                      final userId = chatMessage.chatMessage.userId;
-                      if (nickname != null) {
-                        name = Tooltip(
-                          message: 'ID: $userId',
-                            child: SelectableText.rich(
-                            TextSpan(
-                              text: nickname,
-                              style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                              mouseCursor: SystemMouseCursors.click,
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () async {
-                                  final url = 'https://www.nicovideo.jp/user/$userId';
-                                  if (!await launchUrlString(url)) {
-                                    throw Exception('Failed to open URL: $url');
-                                  }
-                                },
+                        ),
+                        Container(
+                          alignment: Alignment.centerLeft,
+                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
+                          child: SizedBox(
+                            width: sharedPreferences!.getDouble('commentTableUserIconWidth') ?? commentTableUserIconWidthDefaultValue,
+                            child: icon,
+                          ),
+                        ),
+                        Container(
+                          alignment: Alignment.centerLeft,
+                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
+                          child: SizedBox(
+                            width: sharedPreferences!.getDouble('commentTableUserNameWidth') ?? commentTableUserNameWidthDefaultValue,
+                            child: Padding(padding: const EdgeInsets.all(8.0), child: name),
+                          ),
+                        ),
+                        Container(
+                          alignment: Alignment.centerLeft,
+                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
+                          child: SizedBox(
+                            width: sharedPreferences!.getDouble('commentTableTimeWidth') ?? commentTableTimeWidthDefaultValue,
+                            child: Container(alignment: Alignment.center, child: Padding(padding: const EdgeInsets.all(8.0), child: commentedAt)),
+                          ),
+                        ),
+                        Expanded(
+                          child: Tooltip(
+                            message: chatMessage.chatMessage.content,
+                            child: Container(
+                              alignment: Alignment.centerLeft,
+                              decoration: BoxDecoration(border: Border.all(width: 1.0)),
+                              child: Padding(padding: const EdgeInsets.all(8.0), child: content)
                             ),
                           ),
-                        );
-                      } else {
-                        name = SelectableText(userId);
-                      }
-                    }
-
-                    final commentedAtDateTime = DateTime.fromMicrosecondsSinceEpoch(chatMessage.chatMessage.date * 1000 * 1000 + chatMessage.chatMessage.dateUsec, isUtc: true);
-                    final commentedAtDuration = Duration(microseconds: commentedAtDateTime.microsecondsSinceEpoch);
-                    final liveBeginTimeDuration = Duration(seconds: livePage!.program.beginTime);
-                    final commentedAtElapsed = commentedAtDuration - liveBeginTimeDuration;
-
-                    final inHours = commentedAtElapsed.inHours;
-                    final inMinutes = commentedAtElapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
-                    final inSeconds = commentedAtElapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
-
-                    final commentedAtElapsedText = '$inHours:$inMinutes:$inSeconds';
-
-                    final dateTimeFormat = DateFormat('HH:mm:ss');
-                    final commentedAtDateTimeText = dateTimeFormat.format(commentedAtDateTime.toLocal());
-
-                    final fullDateTimeFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
-                    final commentedAtFullDateTimeText = fullDateTimeFormat.format(commentedAtDateTime.toLocal());
-
-                    final commentedAt = Tooltip(
-                      message: 'コメントが投稿された時刻: $commentedAtFullDateTimeText\n番組開始からの経過時間: $commentedAtElapsedText',
-                      child: SelectableText(
-                        (sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue) ? commentedAtElapsedText : 
-                          commentedAtDateTimeText)
-                    );
-
-                    TextStyle? textStyle;
-                    if (chatMessage is! NormalChatMessage) {
-                      // 0x727272
-                      // 0xFF0033
-                      textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
-                    }
-                    final content = SelectableText(
-                      chatMessage.chatMessage.content,
-                      style: textStyle,
-                    );
-
-                    return TableRow(
-                      children: <Widget>[
-                        Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
-                        icon,
-                        Padding(padding: const EdgeInsets.all(8.0), child: name),
-                        Padding(padding: const EdgeInsets.all(8.0), child: commentedAt),
-                        Padding(padding: const EdgeInsets.all(8.0), child: content),
+                        ),
+                        const SizedBox(width: 10.0),
                       ],
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),

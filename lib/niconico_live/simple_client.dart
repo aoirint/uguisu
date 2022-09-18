@@ -168,6 +168,7 @@ class NiconicoLiveSimpleClient {
   Function(ScheduleMessage scheduleMessage)? onScheduleMessage;
   Function(StatisticsMessage statisticsMessage)? onStatisticsMessage;
   Function(BaseChatMessage chatMessage)? onChatMessage;
+  Function(int rvalue)? onRFrameClosed;
 
   late Logger logger;
 
@@ -211,11 +212,13 @@ class NiconicoLiveSimpleClient {
     required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
     required Function(BaseChatMessage chatMessage) onChatMessage,
+    Function(int rvalue)? onRFrameClosed,
   }) async {
     this.livePageUrl = livePageUrl;
     this.onScheduleMessage = onScheduleMessage;
     this.onStatisticsMessage = onStatisticsMessage;
     this.onChatMessage = onChatMessage;
+    this.onRFrameClosed = onRFrameClosed;
 
     NiconicoLivePage livePage = await NiconicoLivePageClient().get(
       uri: Uri.parse(livePageUrl),
@@ -262,6 +265,7 @@ class NiconicoLiveSimpleClient {
       threadkey: threadkey,
       userId: loginCookie?.userId,
       onChatMessage: __onChatMessage,
+      onRFrameClosed: onRFrameClosed,
     );
 
     rooms.add(Room(roomMessage: roomMessage, commentClient: commentClient));
