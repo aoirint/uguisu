@@ -1612,7 +1612,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   final nickname = chatMessage is NormalChatMessage ? chatMessage.commentUser?.userPageCache?.userPage.nickname : null;
                   final userId = chatMessage.chatMessage.userId;
 
-                  // 非184ユーザ
                   if (nickname != null) {
                     name = Tooltip(
                       message: 'ID: $userId',
