@@ -3,25 +3,37 @@ import 'package:logging/logging.dart';
 import 'package:uguisu/api/niconico/niconico_resolver.dart';
 import 'package:uguisu/niconico_live/login_client.dart';
 
-final Logger _logger = Logger('com.aoirint.uguisu.lib.widgets.niconico.niconico_login.NiconicoNormalLoginDialog');
+final Logger _logger = Logger('com.aoirint.uguisu.lib.widgets.niconico.niconico_login.NiconicoMfaLoginDialog');
 
-class NiconicoNormalLoginDialog extends StatefulWidget {
-  final NiconicoLoginResolver loginResolver;
-  final Future<void> Function({required NiconicoLoginResult loginResult}) onLoginResult;
+class NiconicoMfaLoginDialog extends StatefulWidget {
+  final Future<void> Function() onPressedBackButton;
+  final NiconicoMfaLoginResolver mfaLoginResolver;
+  final Future<void> Function({required NiconicoMfaLoginResult mfaLoginResult}) onMfaLoginResult;
 
-  const NiconicoNormalLoginDialog({
+  const NiconicoMfaLoginDialog({
     super.key,
-    required this.loginResolver,
-    required this.onLoginResult,
+    required this.onPressedBackButton,
+    required this.mfaLoginResolver,
+    required this.onMfaLoginResult,
   });
 
   @override
-  State<NiconicoNormalLoginDialog> createState() => _NiconicoNormalLoginDialogState();
+  State<NiconicoMfaLoginDialog> createState() => _NiconicoMfaLoginDialogState();
 }
 
-class _NiconicoNormalLoginDialogState extends State<NiconicoNormalLoginDialog> {
-  final mailTelTextController = TextEditingController(text: '');
-  final passwordTextController = TextEditingController(text: '');
+class _NiconicoMfaLoginDialogState extends State<NiconicoMfaLoginDialog> {
+  final otpTextController = TextEditingController(text: '');
+  final deviceNameTextController = TextEditingController(text: 'Uguisu');
+
+  Logger? logger;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final logger = Logger('main');
+    this.logger = logger;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +55,17 @@ class _NiconicoNormalLoginDialogState extends State<NiconicoNormalLoginDialog> {
                         child: Icon(Icons.arrow_back),
                       ),
                       onPressed: () async {
-                        Navigator.popUntil(context, ModalRoute.withName('/config'));
+                        otpTextController.clear();
+                        deviceNameTextController.clear();
+
+                        await widget.onPressedBackButton();
                       },
                     ),
                   ),
                 ),
                 const Padding(
                   padding: EdgeInsets.all(8.0),
-                  child: Text('ニコニコ動画アカウントにログイン', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
+                  child: Text('確認コードの入力', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
                 ),
               ],
             ),
@@ -58,12 +73,12 @@ class _NiconicoNormalLoginDialogState extends State<NiconicoNormalLoginDialog> {
             Padding(
               padding: const EdgeInsets.all(4.0),
               child: TextField(
-                controller: mailTelTextController,
+                controller: otpTextController,
                 style: const TextStyle(fontSize: 16.0),
                 enabled: true,
                 maxLines: 1,
                 decoration: const InputDecoration(
-                  labelText: 'メールアドレスまたは電話番号',
+                  labelText: '確認コード',
                   contentPadding: EdgeInsets.all(4.0),
                 ),
               ),
@@ -71,13 +86,12 @@ class _NiconicoNormalLoginDialogState extends State<NiconicoNormalLoginDialog> {
             Padding(
               padding: const EdgeInsets.all(4.0),
               child: TextField(
-                controller: passwordTextController,
+                controller: deviceNameTextController,
                 style: const TextStyle(fontSize: 16.0),
                 enabled: true,
                 maxLines: 1,
-                obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: 'パスワード',
+                  labelText: 'デバイス名',
                   contentPadding: EdgeInsets.all(4.0),
                 ),
               ),
@@ -94,20 +108,21 @@ class _NiconicoNormalLoginDialogState extends State<NiconicoNormalLoginDialog> {
                       child: Text('ログイン', style: TextStyle(fontSize: 16.0)),
                     ),
                     onPressed: () async {
-                      final mailTel = mailTelTextController.text;
-                      final password = passwordTextController.text;
+                      const userAgent = 'uguisu/0.0.0';
+                      final otp = otpTextController.text;
+                      final deviceName = deviceNameTextController.text;
 
-                      final loginResult = await widget.loginResolver.resolveLogin(mailTel: mailTel, password: password);
+                      final mfaLoginResult = await widget.mfaLoginResolver.resolveMfaLogin(otp: otp, deviceName: deviceName);
 
                       // FIXME: 例外が投げられる実装になっているのを、エラーを表すオブジェクトを返すように変更する
-                      if (loginResult == null) {
+                      if (mfaLoginResult == null) {
                         showDialog(
                           context: context,
                           barrierDismissible: false,
                           builder: (_) {
                             return AlertDialog(
                               title: const Text('エラー：ログインできませんでした'),
-                              content: const Text('正しい認証情報が入力されているか確認してください。'),
+                              content: const Text('正しい確認コードが入力されているか確認してください。'),
                               actions: [
                                 Padding(
                                   padding: const EdgeInsets.all(8.0),
@@ -124,7 +139,10 @@ class _NiconicoNormalLoginDialogState extends State<NiconicoNormalLoginDialog> {
                         return;
                       }
 
-                      await widget.onLoginResult(loginResult: loginResult);
+                      otpTextController.clear();
+                      deviceNameTextController.clear();
+
+                      await widget.onMfaLoginResult(mfaLoginResult: mfaLoginResult);
                     },
                   ),
                 ),

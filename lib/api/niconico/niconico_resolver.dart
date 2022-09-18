@@ -24,5 +24,9 @@ abstract class NiconicoLivePageUriResolver {
 }
 
 abstract class NiconicoLoginResolver {
-  Future<NiconicoLoginResult?> resolveLogin({required String mailTel, required password});
+  Future<NiconicoLoginResult?> resolveLogin({required String mailTel, required String password});
+}
+
+abstract class NiconicoMfaLoginResolver {
+  Future<NiconicoMfaLoginResult?> resolveMfaLogin({required String otp, required String deviceName});
 }
