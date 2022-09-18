@@ -1300,25 +1300,27 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           this.livePageSupplierUserIconCache = livePageSupplierUserIconCache;
         });
 
-        final liveComment = await loadLiveComment(
-          file: await getLiveCommentCachePath(
-            communityId: simpleClient!.livePage!.socialGroup.id,
-            liveId: simpleClient!.livePage!.program.nicoliveProgramId,
-          ),
-        );
-        if (liveComment != null) {
-          final chatMessages = <BaseChatMessage>[];
-          for (final room in liveComment.rooms) {
-            for (final chatMessage in room.chatMessages) {
-              var cm = simpleClient!.parseChatMessage(chatMessage);
-              if (cm is LazyNormalChatMessage) {
-                cm = await cm.resolve();
-              }
-              chatMessages.add(cm);
-            }
-          }
-          await addAllChatMessagesIfNotExists(chatMessages: chatMessages);
-        }
+        // Load cached live comments for reconnecting
+        // FIXME: reenable fetch-all button to fetch unfetched comments between the connections
+        // final liveComment = await loadLiveComment(
+        //   file: await getLiveCommentCachePath(
+        //     communityId: simpleClient!.livePage!.socialGroup.id,
+        //     liveId: simpleClient!.livePage!.program.nicoliveProgramId,
+        //   ),
+        // );
+        // if (liveComment != null) {
+        //   final chatMessages = <BaseChatMessage>[];
+        //   for (final room in liveComment.rooms) {
+        //     for (final chatMessage in room.chatMessages) {
+        //       var cm = simpleClient!.parseChatMessage(chatMessage);
+        //       if (cm is LazyNormalChatMessage) {
+        //         cm = await cm.resolve();
+        //       }
+        //       chatMessages.add(cm);
+        //     }
+        //   }
+        //   await addAllChatMessagesIfNotExists(chatMessages: chatMessages);
+        // }
       } on NoWatchWebSocketUrlFoundException {
         await showDialog(
           context: context,
