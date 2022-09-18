@@ -1488,7 +1488,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       await OpenFilex.open(iconPath);
                     },
                     child: Tooltip(
-                      message: 'アイコンの画像ファイルを開く',
+                      message: 'アイコンの画像ファイル（キャッシュ）を開く',
                       child: Row(
                         children: [
                           SizedBox(
