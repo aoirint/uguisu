@@ -278,7 +278,7 @@ Future<NiconicoLivePage?> loadLivePage({
   final webSocketUrl = json['webSocketUrl'];
 
   final userProgramWatch = json['userProgramWatch'];
-  final userProgramWatchRejectedReasons = userProgramWatch['rejectedReasons'];
+  final userProgramWatchRejectedReasons = List<dynamic>.of(userProgramWatch['rejectedReasons']).map((e) => e.toString()).toList(); // empty list List<dynamic> to List<String>
 
   final program = json['program'];
   final programTitle = program['title'];
