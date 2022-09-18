@@ -1679,7 +1679,10 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           decoration: BoxDecoration(border: Border.all(width: 1.0)),
                           child: SizedBox(
                             width: sharedPreferences!.getDouble('commentTableNoWidth') ?? commentTableNoWidthDefaultValue,
-                            child: Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
+                            child: Container(
+                              alignment: Alignment.centerRight, 
+                              child: Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
+                            ),
                           ),
                         ),
                         Container(
