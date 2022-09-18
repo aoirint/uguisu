@@ -11,7 +11,7 @@ import 'package:intl/intl.dart';
 
 import 'package:uguisu/api/niconico/niconico_resolver.dart';
 
-final Logger logger = Logger('com.aoirint.uguisu.lib.widgets.NiconicoLiveHeader');
+final Logger _logger = Logger('com.aoirint.uguisu.lib.widgets.NiconicoLiveHeader');
 
 class NiconicoLiveHeader extends StatefulWidget {
   final String livePageUrl;
@@ -59,7 +59,7 @@ class _NiconicoLiveHeaderState extends State<NiconicoLiveHeader> {
       if (supplierUserIconBytes == null) {
         final supplierUserIconBytes = await widget.userIconImageBytesResolver.resolveUserIconImageBytes(userId: widget.supplierUserId);
         if (supplierUserIconBytes == null) {
-          logger.warning('User icon bytes is not found for the user ID = ${widget.supplierUserId}');
+          _logger.warning('User icon bytes is not found for the user ID = ${widget.supplierUserId}');
         }
 
         setState(() {
@@ -79,7 +79,7 @@ class _NiconicoLiveHeaderState extends State<NiconicoLiveHeader> {
               onTap: () async {
                 final iconPath = await widget.userLocalCachedIconImageFileResolver.resolveLocalCachedUserIconImageFile(userId: widget.supplierUserId);
                 if (iconPath == null) {
-                  logger.warning('User icon path is not found for the user ID = ${widget.supplierUserId}');
+                  _logger.warning('User icon path is not found for the user ID = ${widget.supplierUserId}');
                   return;
                 }
 
@@ -140,7 +140,7 @@ class _NiconicoLiveHeaderState extends State<NiconicoLiveHeader> {
                             final uri = await widget.userPageUriResolver.resolveUserPageUri(userId: widget.supplierUserId);
 
                             if (uri == null) {
-                              logger.warning('User page uri is not found for the user ID = ${widget.supplierUserId}');
+                              _logger.warning('User page uri is not found for the user ID = ${widget.supplierUserId}');
                               return;
                             }
 
@@ -166,7 +166,7 @@ class _NiconicoLiveHeaderState extends State<NiconicoLiveHeader> {
                             final uri = await widget.communityPageUriResolver.resolveCommunityPageUri(communityId: widget.supplierCommunityId);
 
                             if (uri == null) {
-                              logger.warning('Community page uri is not found for the community ID = ${widget.supplierCommunityId}');
+                              _logger.warning('Community page uri is not found for the community ID = ${widget.supplierCommunityId}');
                               return;
                             }
 

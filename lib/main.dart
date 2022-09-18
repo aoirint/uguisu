@@ -1,9 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
-import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:path_provider/path_provider.dart';
@@ -14,15 +12,11 @@ import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:collection/collection.dart';
-import 'package:uguisu/api/niconico/niconico_resolver.dart';
-import 'package:uguisu/widgets/niconico_live_comment_list.dart';
-import 'package:uguisu/widgets/niconico_live_connect_form.dart';
-import 'package:uguisu/widgets/niconico_live_header.dart';
-import 'package:uguisu/widgets/niconico_live_statistics.dart';
+import 'package:uguisu/api/niconico/niconico.dart';
+import 'package:uguisu/widgets/niconico/niconico.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import 'package:open_filex/open_filex.dart';
 
 final mainLogger = Logger('com.aoirint.uguisu');
 
