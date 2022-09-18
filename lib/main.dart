@@ -1707,10 +1707,13 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           ),
                         ),
                         Expanded(
-                          child: Container(
-                            alignment: Alignment.centerLeft,
-                            decoration: BoxDecoration(border: Border.all(width: 1.0)),
-                            child: Padding(padding: const EdgeInsets.all(8.0), child: content)
+                          child: Tooltip(
+                            message: chatMessage.chatMessage.content,
+                            child: Container(
+                              alignment: Alignment.centerLeft,
+                              decoration: BoxDecoration(border: Border.all(width: 1.0)),
+                              child: Padding(padding: const EdgeInsets.all(8.0), child: content)
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10.0),
