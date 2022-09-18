@@ -1703,7 +1703,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           decoration: BoxDecoration(border: Border.all(width: 1.0)),
                           child: SizedBox(
                             width: sharedPreferences!.getDouble('commentTableTimeWidth') ?? commentTableTimeWidthDefaultValue,
-                            child: Padding(padding: const EdgeInsets.all(8.0), child: commentedAt),
+                            child: Container(alignment: Alignment.center, child: Padding(padding: const EdgeInsets.all(8.0), child: commentedAt)),
                           ),
                         ),
                         Expanded(
