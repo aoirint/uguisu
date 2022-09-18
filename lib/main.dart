@@ -1548,12 +1548,12 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              NiconicoLiveStatistics(
+              Expanded(child: NiconicoLiveStatistics(
                 viewers: statisticsMessage?.viewers,
                 comments: statisticsMessage?.comments,
                 adPoints: statisticsMessage?.adPoints,
                 giftPoints: statisticsMessage?.giftPoints,
-              ),
+              )),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Tooltip(
