@@ -18,17 +18,15 @@ class NiconicoUserIcon {
 }
 
 class NiconicoUserIconClient {
-  late Logger logger;
-
-  NiconicoUserIconClient() {
-    logger = Logger('NiconicoUserIconClient');
-  }
+  final Logger logger = Logger('com.aoirint.uguisu.niconico_live.NiconicoUserIconClient');
 
   Future<NiconicoUserIcon> get({
     required Uri uri,
     SweetCookieJar? cookieJar,
     required String userAgent,
   }) async {
+    logger.fine('UserIcon request: $uri');
+
     final headers = {'User-Agent': userAgent};
     if (cookieJar != null) {headers['Cookie'] = formatCookieJarForRequestHeader(cookieJar);}
 
