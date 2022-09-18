@@ -28,6 +28,7 @@ const commentTableNoWidthDefaultValue = 50.0;
 const commentTableUserIconWidthDefaultValue = 32.0;
 const commentTableUserNameWidthDefaultValue = 260.0;
 const commentTableTimeWidthDefaultValue = 70.0;
+const commentTableRowHeightDefaultValue = 37.0;
 
 void main() async {
   Logger.root.level = Level.ALL;
@@ -1579,7 +1580,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
               child: ListView.builder(
                 controller: chatMessageListScrollController,
                 itemCount: chatMessages.length,
-                // itemExtent: 50,
+                itemExtent: commentTableRowHeightDefaultValue,
                 itemBuilder: (context, index) {
                   final chatMessage = chatMessages[index];
 
