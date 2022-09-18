@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 
 import 'package:uguisu/api/niconico/niconico_resolver.dart';
 
-final Logger logger = Logger('com.aoirint.uguisu.lib.widgets.NiconicoLiveCommentList');
+final Logger _logger = Logger('com.aoirint.uguisu.lib.widgets.NiconicoLiveCommentList');
 
 class NiconicoLiveCommentList extends StatefulWidget {
   final ScrollController chatMessageListScrollController;
@@ -73,7 +73,7 @@ class _NiconicoLiveCommentListState extends State<NiconicoLiveCommentList> {
                     onTap: () async {
                       final iconPath = await widget.userLocalCachedIconImageFileResolver.resolveLocalCachedUserIconImageFile(userId: userIconCache.userId);
                       if (iconPath == null) {
-                        logger.warning('User icon path is not found for the user ID = ${userIconCache.userId}');
+                        _logger.warning('User icon path is not found for the user ID = ${userIconCache.userId}');
                         return;
                       }
 
@@ -105,7 +105,7 @@ class _NiconicoLiveCommentListState extends State<NiconicoLiveCommentList> {
                         final uri = await widget.userPageUriResolver.resolveUserPageUri(userId: int.parse(userId));
 
                         if (uri == null) {
-                          logger.warning('User page uri is not found for the user ID = $userId');
+                          _logger.warning('User page uri is not found for the user ID = $userId');
                           return;
                         }
 
