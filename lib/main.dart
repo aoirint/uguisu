@@ -17,6 +17,7 @@ import 'package:collection/collection.dart';
 import 'package:uguisu/api/niconico/niconico_resolver.dart';
 import 'package:uguisu/widgets/niconico_live_comment_list.dart';
 import 'package:uguisu/widgets/niconico_live_header.dart';
+import 'package:uguisu/widgets/niconico_live_statistics.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -1547,69 +1548,12 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Tooltip(
-                        message: '来場者数',
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.person))),
-                            const SizedBox(width: 4.0),
-                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.viewers.toString() :  '-'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Tooltip(
-                        message: 'コメント数',
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.comment))),
-                            const SizedBox(width: 4.0),
-                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.comments.toString() :  '-'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Tooltip(
-                        message: 'ニコニ広告ポイント',
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.campaign))),
-                            const SizedBox(width: 4.0),
-                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.adPoints.toString() :  '-'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Tooltip(
-                        message: 'ギフトポイント',
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const SizedBox(width: 24.0, height: 24.0, child: FittedBox(child: Icon(Icons.redeem))),
-                            const SizedBox(width: 4.0),
-                            Text(statisticsMessage?.viewers != null ? statisticsMessage!.giftPoints.toString() :  '-'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              Expanded(child: NiconicoLiveStatistics(
+                viewers: statisticsMessage?.viewers,
+                comments: statisticsMessage?.comments,
+                adPoints: statisticsMessage?.adPoints,
+                giftPoints: statisticsMessage?.giftPoints,
+              )),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Tooltip(
