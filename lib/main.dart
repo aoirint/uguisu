@@ -25,7 +25,7 @@ const alwaysOnTopDefaultValue = false;
 const commentTimeFormatElapsedDefaultValue = false;
 
 const commentTableNoWidthDefaultValue = 50.0;
-const commentTableUserIconWidthDefaultValue = 34.0;
+const commentTableUserIconWidthDefaultValue = 35.0;
 const commentTableUserNameWidthDefaultValue = 260.0;
 const commentTableTimeWidthDefaultValue = 70.0;
 const commentTableRowHeightDefaultValue = 37.0;
