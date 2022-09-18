@@ -16,6 +16,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:uguisu/api/niconico/niconico_resolver.dart';
 import 'package:uguisu/widgets/niconico_live_comment_list.dart';
+import 'package:uguisu/widgets/niconico_live_connect_form.dart';
 import 'package:uguisu/widgets/niconico_live_header.dart';
 import 'package:uguisu/widgets/niconico_live_statistics.dart';
 import 'package:window_manager/window_manager.dart';
@@ -1152,6 +1153,28 @@ class SimpleNiconicoCommunityPageUriResolver with NiconicoCommunityPageUriResolv
   }
 }
 
+class SimpleNiconicoLivePageUriResolver with NiconicoLivePageUriResolver {
+  @override
+  Future<Uri?> resolveLivePageUri({required String liveIdOrUrl}) async {
+    String? livePageUrl;
+
+    // Full URL
+    // if (livePageIdOrUrl.startsWith('http')) {
+    if (liveIdOrUrl.startsWith('https://live.nicovideo.jp/')) { // casual blocking unknown urls
+      livePageUrl = liveIdOrUrl;
+    }
+
+    // Live ID (lv000000000)
+    final liveIdMatch = RegExp(r'^(lv\d+)$').firstMatch(liveIdOrUrl);
+    if (liveIdMatch != null) {
+      final liveId = liveIdMatch.group(1); // lv000000000
+      livePageUrl = 'https://live.nicovideo.jp/watch/${liveId}';
+    }
+
+    return livePageUrl != null ? Uri.parse(livePageUrl) : null;
+  }
+}
+
 
 class NiconicoLivePageWidget extends StatefulWidget {
   const NiconicoLivePageWidget({
@@ -1246,27 +1269,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     required BaseChatMessage chatMessage,
   }) async {
     await addAllChatMessagesIfNotExists(chatMessages: [chatMessage]);
-  }
-
-  String? __createLivePageUrl({
-    required String livePageIdOrUrl,
-  }) {
-    String? livePageUrl;
-
-    // Full URL
-    // if (livePageIdOrUrl.startsWith('http')) {
-    if (livePageIdOrUrl.startsWith('https://live.nicovideo.jp/')) { // casual blocking unknown urls
-      livePageUrl = livePageIdOrUrl;
-    }
-
-    // Live ID (lv000000000)
-    final liveIdMatch = RegExp(r'^(lv\d+)$').firstMatch(livePageIdOrUrl);
-    if (liveIdMatch != null) {
-      final liveId = liveIdMatch.group(1); // lv000000000
-      livePageUrl = 'https://live.nicovideo.jp/watch/${liveId}';
-    }
-
-    return livePageUrl;
   }
 
   void setLivePageUrl({
@@ -1444,77 +1446,27 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     return Scaffold(
       body: Column(
         children: <Widget>[
-          Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(4.0), 
-                      child: TextField(
-                        controller: liveIdOrUrlTextController,
-                        style: const TextStyle(fontSize: 12.0),
-                        enabled: true,
-                        maxLines: 1,
-                        decoration: const InputDecoration(
-                          labelText: 'ニコニコ生放送 番組ID または URL (例: lv000000000, https://live.nicovideo.jp/watch/lv000000000)',
-                          contentPadding: EdgeInsets.all(4.0),
-                        ),
-                      ),
-                    ),
+              Expanded(child: NiconicoLiveConnectForm(
+                liveIdOrUrlTextController: liveIdOrUrlTextController,
+                livePageUriResolver: SimpleNiconicoLivePageUriResolver(),
+                onSubmitLivePageUri: ({required livePageUri}) async {
+                  setLivePageUrl(livePageUrl: livePageUri.toString(), loginCookie: loginCookieData.loginCookie);
+                },
+              )),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Tooltip(
+                  message: '設定',
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/config');
+                    },
+                    child: const Padding(padding: EdgeInsets.all(4.0), child: Icon(Icons.settings)),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0), 
-                    child: Tooltip(
-                      message: '番組に接続',
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final livePageIdOrUrl = liveIdOrUrlTextController.text;
-                          final livePageUrl = __createLivePageUrl(livePageIdOrUrl: livePageIdOrUrl);
-                          if (livePageUrl == null) {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (_) {
-                                return AlertDialog(
-                                  title: const Text('エラー：入力された番組IDまたはURLの形式は非対応です'),
-                                  content: const Text('正しい形式で入力されているか確認してください。'),
-                                  actions: [
-                                    Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: ElevatedButton(
-                                        child: const Text('OK'),
-                                        onPressed: () => Navigator.pop(context),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-
-                            return;
-                          }
-
-                          setLivePageUrl(livePageUrl: livePageUrl, loginCookie: loginCookieData.loginCookie);
-                        },
-                        child: const Padding(padding: EdgeInsets.all(4.0), child: Icon(Icons.power)),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Tooltip(
-                      message: '設定',
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/config');
-                        },
-                        child: const Padding(padding: EdgeInsets.all(4.0), child: Icon(Icons.settings)),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
