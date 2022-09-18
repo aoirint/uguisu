@@ -15,6 +15,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:uguisu/api/niconico/niconico_resolver.dart';
+import 'package:uguisu/widgets/niconico_live_comment_list.dart';
 import 'package:uguisu/widgets/niconico_live_header.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
@@ -1530,160 +1531,18 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             supplierCommunityId: livePage!.socialGroup.id,
             supplierCommunityName: livePage!.socialGroup.name,
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(0.0),
-              child: ListView.builder(
-                controller: chatMessageListScrollController,
-                itemCount: chatMessages.length,
-                itemExtent: commentTableRowHeightDefaultValue,
-                itemBuilder: (context, index) {
-                  final chatMessage = chatMessages[index];
-
-                  Widget icon = Container();
-                  if (chatMessage is NormalChatMessage) {
-                    final userIconCache = chatMessage.commentUser?.userIconCache;
-                    if (userIconCache != null) {
-                      final iconBytes = userIconCache.userIcon.iconBytes;
-
-                      icon = MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () async {
-                            final iconPath = await getUserIconPath(userIconCache.userId);
-                            if (iconPath == null) return;
-
-                            await OpenFilex.open(iconPath);
-                          },
-                          child: Tooltip(
-                            message: 'アイコンの画像ファイルを開く',
-                            child: Image.memory(iconBytes),
-                          ),
-                        ),
-                      );
-                    }
-                  }
-
-                  Widget name = Container();
-                  final nickname = chatMessage is NormalChatMessage ? chatMessage.commentUser?.userPageCache?.userPage.nickname : null;
-                  final userId = chatMessage.chatMessage.userId;
-
-                  if (nickname != null) {
-                    name = Tooltip(
-                      message: 'ID: $userId',
-                        child: SelectableText.rich(
-                        TextSpan(
-                          text: nickname,
-                          style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                          mouseCursor: SystemMouseCursors.click,
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () async {
-                              final url = 'https://www.nicovideo.jp/user/$userId';
-                              if (!await launchUrlString(url)) {
-                                throw Exception('Failed to open URL: $url');
-                              }
-                            },
-                        ),
-                      ),
-                    );
-                  } else {
-                    name = Tooltip(
-                      message: 'ID: $userId',
-                      child: SelectableText(userId),
-                    );
-                  }
-
-                  final commentedAtDateTime = DateTime.fromMicrosecondsSinceEpoch(chatMessage.chatMessage.date * 1000 * 1000 + chatMessage.chatMessage.dateUsec, isUtc: true);
-                  final commentedAtDuration = Duration(microseconds: commentedAtDateTime.microsecondsSinceEpoch);
-                  final liveBeginTimeDuration = Duration(seconds: livePage!.program.beginTime);
-                  final commentedAtElapsed = commentedAtDuration - liveBeginTimeDuration;
-
-                  final inHours = commentedAtElapsed.inHours;
-                  final inMinutes = commentedAtElapsed.inMinutes.remainder(60).toString().padLeft(2, '0');
-                  final inSeconds = commentedAtElapsed.inSeconds.remainder(60).toString().padLeft(2, '0');
-
-                  final commentedAtElapsedText = '$inHours:$inMinutes:$inSeconds';
-
-                  final dateTimeFormat = DateFormat('HH:mm:ss');
-                  final commentedAtDateTimeText = dateTimeFormat.format(commentedAtDateTime.toLocal());
-
-                  final fullDateTimeFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
-                  final commentedAtFullDateTimeText = fullDateTimeFormat.format(commentedAtDateTime.toLocal());
-
-                  final commentedAt = Tooltip(
-                    message: 'コメントが投稿された時刻: $commentedAtFullDateTimeText\n番組開始からの経過時間: $commentedAtElapsedText',
-                    child: SelectableText(
-                      (sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue) ? commentedAtElapsedText : 
-                        commentedAtDateTimeText)
-                  );
-
-                  TextStyle? textStyle;
-                  if (chatMessage is! NormalChatMessage) {
-                    // 0x727272
-                    // 0xFF0033
-                    textStyle = const TextStyle(color: Color.fromARGB(255, 0xFF, 0x00, 0x33));
-                  }
-                  final content = SelectableText(
-                    chatMessage.chatMessage.content,
-                    style: textStyle,
-                  );
-
-                  return IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
-                          child: SizedBox(
-                            width: sharedPreferences!.getDouble('commentTableNoWidth') ?? commentTableNoWidthDefaultValue,
-                            child: Container(
-                              alignment: Alignment.centerRight, 
-                              child: Padding(padding: const EdgeInsets.all(8.0), child: SelectableText('${chatMessage.chatMessage.no}')),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
-                          child: SizedBox(
-                            width: sharedPreferences!.getDouble('commentTableUserIconWidth') ?? commentTableUserIconWidthDefaultValue,
-                            child: icon,
-                          ),
-                        ),
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
-                          child: SizedBox(
-                            width: sharedPreferences!.getDouble('commentTableUserNameWidth') ?? commentTableUserNameWidthDefaultValue,
-                            child: Padding(padding: const EdgeInsets.all(8.0), child: name),
-                          ),
-                        ),
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          decoration: BoxDecoration(border: Border.all(width: 1.0)),
-                          child: SizedBox(
-                            width: sharedPreferences!.getDouble('commentTableTimeWidth') ?? commentTableTimeWidthDefaultValue,
-                            child: Container(alignment: Alignment.center, child: Padding(padding: const EdgeInsets.all(8.0), child: commentedAt)),
-                          ),
-                        ),
-                        Expanded(
-                          child: Tooltip(
-                            message: chatMessage.chatMessage.content,
-                            child: Container(
-                              alignment: Alignment.centerLeft,
-                              decoration: BoxDecoration(border: Border.all(width: 1.0)),
-                              child: Padding(padding: const EdgeInsets.all(8.0), child: content)
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10.0),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
+          livePage == null ? Expanded(child: Container()) : NiconicoLiveCommentList(
+            chatMessageListScrollController: chatMessageListScrollController,
+            liveBeginDateTime: DateTime.fromMillisecondsSinceEpoch(livePage!.program.beginTime * 1000, isUtc: true),
+            chatMessages: chatMessages,
+            userLocalCachedIconImageFileResolver: SimpleNiconicoLocalCachedUserIconImageFileResolver(),
+            userPageUriResolver: SimpleNiconicoUserPageUriResolver(),
+            commentTimeFormatElapsed: sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue, // FIXME: watch changes
+            commentTableRowHeight: sharedPreferences!.getDouble('commentTableRowHeight') ?? commentTableRowHeightDefaultValue, // FIXME: watch changes
+            commentTableNoWidth: sharedPreferences!.getDouble('commentTableNoWidth') ?? commentTableNoWidthDefaultValue, // FIXME: watch changes
+            commentTableUserIconWidth: sharedPreferences!.getDouble('commentTableUserIconWidth') ?? commentTableUserIconWidthDefaultValue, // FIXME: watch changes
+            commentTableUserNameWidth: sharedPreferences!.getDouble('commentTableUserNameWidth') ?? commentTableUserNameWidthDefaultValue, // FIXME: watch changes
+            commentTableTimeWidth: sharedPreferences!.getDouble('commentTableTimeWidth') ?? commentTableTimeWidthDefaultValue, // FIXME: watch changes
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
