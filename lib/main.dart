@@ -832,6 +832,22 @@ class NiconicoLoginWidget extends StatelessWidget {
   }
 }
 
+class SimpleNiconicoLoginResolver with NiconicoLoginResolver {
+  @override
+  Future<NiconicoLoginResult?> resolveLogin({required String mailTel, required password}) async {
+    const userAgent = 'uguisu/0.0.0';
+
+    final loginResult = await NiconicoLoginClient().login(
+      uri: Uri.parse('https://account.nicovideo.jp/login/redirector?site=niconico&next_url=%2F'), // site, next_url is required for user-id fetching; redirected to https://www.nicovideo.jp/ after MFA
+      mailTel: mailTel,
+      password: password,
+      userAgent: userAgent,
+    );
+
+    return loginResult;
+  }
+}
+
 class NiconicoLoginSwitchWidget extends StatelessWidget {
   const NiconicoLoginSwitchWidget({super.key});
 
@@ -841,7 +857,18 @@ class NiconicoLoginSwitchWidget extends StatelessWidget {
     final mfaLoginResult = context.watch<NiconicoMfaLoginResultData>().mfaLoginResult;
 
     if (loginResult == null) {
-      return const NiconicoNormalLoginWidget();
+      return NiconicoNormalLoginDialog(
+        loginResolver: SimpleNiconicoLoginResolver(),
+        onLoginResult: ({required loginResult}) async {
+          context.read<NiconicoLoginResultData>().setLoginResult(loginResult);
+
+          if (! loginResult.mfaRequired) {
+            final loginCookie = NiconicoLoginCookie(cookieJar: loginResult.cookieJar, userId: loginResult.userId!);
+            context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
+            await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
+          }
+        },
+      );
     }
 
     if (loginResult.mfaRequired && mfaLoginResult == null) {
@@ -853,130 +880,6 @@ class NiconicoLoginSwitchWidget extends StatelessWidget {
     });
 
     return Column();
-  }
-}
-
-class NiconicoNormalLoginWidget extends StatefulWidget {
-  const NiconicoNormalLoginWidget({super.key});
-
-  @override
-  State<NiconicoNormalLoginWidget> createState() => _NiconicoNormalLoginWidgetState();
-}
-
-class _NiconicoNormalLoginWidgetState extends State<NiconicoNormalLoginWidget> {
-  final mailTelTextController = TextEditingController(text: '');
-  final passwordTextController = TextEditingController(text: '');
-
-  Logger? logger;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final logger = Logger('_NiconicoNormalLoginWidgetState');
-    this.logger = logger;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Tooltip(
-                    message: '前の画面に戻る',
-                    child: ElevatedButton(
-                      child: const Padding(
-                        padding: EdgeInsets.all(6.0),
-                        child: Icon(Icons.arrow_back),
-                      ),
-                      onPressed: () async {
-                        Navigator.popUntil(context, ModalRoute.withName('/config'));
-                      },
-                    ),
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('ニコニコ動画アカウントにログイン', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
-                ),
-              ],
-            ),
-            const SizedBox(height: 8.0),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: TextField(
-                controller: mailTelTextController,
-                style: const TextStyle(fontSize: 16.0),
-                enabled: true,
-                maxLines: 1,
-                decoration: const InputDecoration(
-                  labelText: 'メールアドレスまたは電話番号',
-                  contentPadding: EdgeInsets.all(4.0),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: TextField(
-                controller: passwordTextController,
-                style: const TextStyle(fontSize: 16.0),
-                enabled: true,
-                maxLines: 1,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'パスワード',
-                  contentPadding: EdgeInsets.all(4.0),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8.0),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: ElevatedButton(
-                    child: const Padding(
-                      padding: EdgeInsets.all(6.0),
-                      child: Text('ログイン', style: TextStyle(fontSize: 16.0)),
-                    ),
-                    onPressed: () async {
-                      const userAgent = 'uguisu/0.0.0';
-                      final mailTel = mailTelTextController.text;
-                      final password = passwordTextController.text;
-
-                      final loginResult = await NiconicoLoginClient().login(
-                        uri: Uri.parse('https://account.nicovideo.jp/login/redirector?site=niconico&next_url=%2F'), // site, next_url is required for user-id fetching; redirected to https://www.nicovideo.jp/ after MFA
-                        mailTel: mailTel,
-                        password: password,
-                        userAgent: userAgent,
-                      );
-
-                      if (mounted) {
-                        context.read<NiconicoLoginResultData>().setLoginResult(loginResult);
-
-                        if (! loginResult.mfaRequired) {
-                          final loginCookie = NiconicoLoginCookie(cookieJar: loginResult.cookieJar, userId: loginResult.userId!);
-                          context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
-                          await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
-                        }
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
