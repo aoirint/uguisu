@@ -799,39 +799,6 @@ class NiconicoLoginCookieData with ChangeNotifier {
   }
 }
 
-class NiconicoLoginResultData with ChangeNotifier {
-  NiconicoLoginResult? loginResult;
-
-  void setLoginResult(NiconicoLoginResult? loginResult) {
-    this.loginResult = loginResult;
-    notifyListeners();
-  }
-}
-
-class NiconicoMfaLoginResultData with ChangeNotifier {
-  NiconicoMfaLoginResult? mfaLoginResult;
-
-  void setMfaLoginResult(NiconicoMfaLoginResult? mfaLoginResult) {
-    this.mfaLoginResult = mfaLoginResult;
-    notifyListeners();
-  }
-}
-
-class NiconicoLoginWidget extends StatelessWidget {
-  const NiconicoLoginWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => NiconicoLoginResultData()),
-        ChangeNotifierProvider(create: (context) => NiconicoMfaLoginResultData()),
-      ],
-      child: const NiconicoLoginSwitchWidget(),
-    );
-  }
-}
-
 class SimpleNiconicoLoginResolver with NiconicoLoginResolver {
   @override
   Future<NiconicoLoginResult?> resolveLogin({required String mailTel, required String password}) async {
@@ -871,54 +838,35 @@ class SimpleNiconicoMfaLoginResolver with NiconicoMfaLoginResolver {
     return mfaLoginResult;
   }
 }
-
-class NiconicoLoginSwitchWidget extends StatelessWidget {
-  const NiconicoLoginSwitchWidget({super.key});
+class NiconicoLoginWidget extends StatelessWidget {
+  const NiconicoLoginWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final loginResult = context.watch<NiconicoLoginResultData>().loginResult;
-    final mfaLoginResult = context.watch<NiconicoMfaLoginResultData>().mfaLoginResult;
+    return NiconicoLoginSwitchDialog(
+      loginResolver: SimpleNiconicoLoginResolver(),
+      mfaLoginResolverBuilder: ({required loginResult}) => SimpleNiconicoMfaLoginResolver(loginResult: loginResult),
+      onLoginResult: ({required loginResult}) async {
+        final loginCookie = NiconicoLoginCookie(cookieJar: loginResult.cookieJar, userId: loginResult.userId!);
+        context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
+        await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
 
-    if (loginResult == null) {
-      return NiconicoNormalLoginDialog(
-        loginResolver: SimpleNiconicoLoginResolver(),
-        onLoginResult: ({required loginResult}) async {
-          context.read<NiconicoLoginResultData>().setLoginResult(loginResult);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.popUntil(context, ModalRoute.withName('/config'));
+        });
+      },
+      onMfaLoginResult: ({required mfaLoginResult}) async {
+        final loginCookie = NiconicoLoginCookie(cookieJar: mfaLoginResult.cookieJar, userId: mfaLoginResult.userId);
+        context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
+        await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
 
-          if (! loginResult.mfaRequired) {
-            final loginCookie = NiconicoLoginCookie(cookieJar: loginResult.cookieJar, userId: loginResult.userId!);
-            context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
-            await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
-          }
-        },
-      );
-    }
-
-    if (loginResult.mfaRequired && mfaLoginResult == null) {
-      return NiconicoMfaLoginDialog(
-        onPressedBackButton: () async {
-          context.read<NiconicoLoginResultData>().setLoginResult(null);
-        },
-        mfaLoginResolver: SimpleNiconicoMfaLoginResolver(loginResult: loginResult),
-        onMfaLoginResult: ({required mfaLoginResult}) async {
-          context.read<NiconicoMfaLoginResultData>().setMfaLoginResult(mfaLoginResult);
-
-          final loginCookie = NiconicoLoginCookie(cookieJar: mfaLoginResult.cookieJar, userId: mfaLoginResult.userId);
-          context.read<NiconicoLoginCookieData>().setLoginCookie(loginCookie: loginCookie);
-          await saveLoginCookie(loginCookie: loginCookie, file: await getLoginCookiePath());
-        },
-      );
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Navigator.popUntil(context, ModalRoute.withName('/config'));
-    });
-
-    return Column();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.popUntil(context, ModalRoute.withName('/config'));
+        });
+      },
+    );
   }
 }
-
 
 // 差分を抑えるための、現状の実装を流用した仮置きの定義。多少非効率なことを許容する
 class SimpleNiconicoUserIconImageBytesResolver with NiconicoUserIconImageBytesResolver {

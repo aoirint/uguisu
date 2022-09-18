@@ -25,16 +25,6 @@ class _NiconicoMfaLoginDialogState extends State<NiconicoMfaLoginDialog> {
   final otpTextController = TextEditingController(text: '');
   final deviceNameTextController = TextEditingController(text: 'Uguisu');
 
-  Logger? logger;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final logger = Logger('main');
-    this.logger = logger;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
