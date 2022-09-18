@@ -497,6 +497,27 @@ class NiconicoLoginUserData with ChangeNotifier {
   }
 }
 
+class NiconicoLoginCookie {
+  final SweetCookieJar cookieJar;
+  final String userId;
+
+  NiconicoLoginCookie({
+    required this.cookieJar,
+    required this.userId,
+  });
+}
+
+class NiconicoLoginCookieData with ChangeNotifier {
+  NiconicoLoginCookie? loginCookie;
+
+  NiconicoLoginCookieData({this.loginCookie});
+
+  void setLoginCookie({NiconicoLoginCookie? loginCookie}) {
+    this.loginCookie = loginCookie;
+    notifyListeners();
+  }
+}
+
 class MyApp extends StatelessWidget {
   final NiconicoLoginCookie? initialLoginCookie;
 
@@ -776,27 +797,6 @@ Future<void> saveLoginCookie({
   });
 
   await file.writeAsString(rawJson, encoding: utf8);
-}
-
-class NiconicoLoginCookie {
-  final SweetCookieJar cookieJar;
-  final String userId;
-
-  NiconicoLoginCookie({
-    required this.cookieJar,
-    required this.userId,
-  });
-}
-
-class NiconicoLoginCookieData with ChangeNotifier {
-  NiconicoLoginCookie? loginCookie;
-
-  NiconicoLoginCookieData({this.loginCookie});
-
-  void setLoginCookie({NiconicoLoginCookie? loginCookie}) {
-    this.loginCookie = loginCookie;
-    notifyListeners();
-  }
 }
 
 class SimpleNiconicoLoginResolver with NiconicoLoginResolver {
