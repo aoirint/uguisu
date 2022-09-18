@@ -1609,30 +1609,32 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   }
 
                   Widget name = Container();
-                  if (chatMessage is NormalChatMessage) {
-                    final nickname = chatMessage.commentUser?.userPageCache?.userPage.nickname;
-                    final userId = chatMessage.chatMessage.userId;
-                    if (nickname != null) {
-                      name = Tooltip(
-                        message: 'ID: $userId',
-                          child: SelectableText.rich(
-                          TextSpan(
-                            text: nickname,
-                            style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                            mouseCursor: SystemMouseCursors.click,
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () async {
-                                final url = 'https://www.nicovideo.jp/user/$userId';
-                                if (!await launchUrlString(url)) {
-                                  throw Exception('Failed to open URL: $url');
-                                }
-                              },
-                          ),
+                  final nickname = chatMessage is NormalChatMessage ? chatMessage.commentUser?.userPageCache?.userPage.nickname : null;
+                  final userId = chatMessage.chatMessage.userId;
+
+                  if (nickname != null) {
+                    name = Tooltip(
+                      message: 'ID: $userId',
+                        child: SelectableText.rich(
+                        TextSpan(
+                          text: nickname,
+                          style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                          mouseCursor: SystemMouseCursors.click,
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () async {
+                              final url = 'https://www.nicovideo.jp/user/$userId';
+                              if (!await launchUrlString(url)) {
+                                throw Exception('Failed to open URL: $url');
+                              }
+                            },
                         ),
-                      );
-                    } else {
-                      name = SelectableText(userId);
-                    }
+                      ),
+                    );
+                  } else {
+                    name = Tooltip(
+                      message: 'ID: $userId',
+                      child: SelectableText(userId),
+                    );
                   }
 
                   final commentedAtDateTime = DateTime.fromMicrosecondsSinceEpoch(chatMessage.chatMessage.date * 1000 * 1000 + chatMessage.chatMessage.dateUsec, isUtc: true);
