@@ -838,6 +838,7 @@ class SimpleNiconicoMfaLoginResolver with NiconicoMfaLoginResolver {
     return mfaLoginResult;
   }
 }
+
 class NiconicoLoginWidget extends StatelessWidget {
   const NiconicoLoginWidget({super.key});
 
