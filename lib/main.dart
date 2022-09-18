@@ -1488,7 +1488,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       await OpenFilex.open(iconPath);
                     },
                     child: Tooltip(
-                      message: 'アイコンの画像ファイルを開く',
+                      message: 'アイコンの画像ファイル（キャッシュ）を開く',
                       child: Row(
                         children: [
                           SizedBox(
@@ -1508,55 +1508,64 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(10.0, 8.0, 10.0, 4.0),
-                    child: Text.rich(
-                          TextSpan(
-                            text: livePage!.program.title,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                            mouseCursor: SystemMouseCursors.click,
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () async {
-                                final url = livePageUrl!;
-                                if (!await launchUrlString(url)) {
-                                  throw Exception('Failed to open URL: $url');
-                                }
-                              },
-                          ),
+                    child: Tooltip(
+                      message: '放送ページを開く\nID: ${livePage!.program.nicoliveProgramId}',
+                      child: Text.rich(
+                        TextSpan(
+                          text: livePage!.program.title,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          mouseCursor: SystemMouseCursors.click,
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () async {
+                              final url = livePageUrl!;
+                              if (!await launchUrlString(url)) {
+                                throw Exception('Failed to open URL: $url');
+                              }
+                            },
                         ),
+                      ),
+                    ),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: <Widget>[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
-                        child: Text.rich(
-                          TextSpan(
-                            text: livePage!.program.supplier.name,
-                            style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                            mouseCursor: SystemMouseCursors.click,
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () async {
-                                final url = 'https://www.nicovideo.jp/user/${livePage!.program.supplier.programProviderId}';
-                                if (!await launchUrlString(url)) {
-                                  throw Exception('Failed to open URL: $url');
-                                }
-                              },
+                        child: Tooltip(
+                          message: '放送者のユーザーページを開く\nID: ${livePage!.program.supplier.programProviderId}',
+                          child: Text.rich(
+                            TextSpan(
+                              text: livePage!.program.supplier.name,
+                              style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                              mouseCursor: SystemMouseCursors.click,
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final url = 'https://www.nicovideo.jp/user/${livePage!.program.supplier.programProviderId}';
+                                  if (!await launchUrlString(url)) {
+                                    throw Exception('Failed to open URL: $url');
+                                  }
+                                },
+                            ),
                           ),
                         ),
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(10.0, 4.0, 10.0, 8.0),
-                        child: Text.rich(
-                          TextSpan(
-                            text: livePage!.socialGroup.name,
-                            style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
-                            mouseCursor: SystemMouseCursors.click,
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () async {
-                                final url = 'https://com.nicovideo.jp/community/${livePage!.socialGroup.id}';
-                                if (!await launchUrlString(url)) {
-                                  throw Exception('Failed to open URL: $url');
-                                }
-                              },
+                        child: Tooltip(
+                          message: '放送中のコミュニティページを開く\nID: ${livePage!.socialGroup.id}',
+                          child: Text.rich(
+                            TextSpan(
+                              text: livePage!.socialGroup.name,
+                              style: const TextStyle(color: Color.fromARGB(255, 0, 120, 255)),
+                              mouseCursor: SystemMouseCursors.click,
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final url = 'https://com.nicovideo.jp/community/${livePage!.socialGroup.id}';
+                                  if (!await launchUrlString(url)) {
+                                    throw Exception('Failed to open URL: $url');
+                                  }
+                                },
+                            ),
                           ),
                         ),
                       ),
