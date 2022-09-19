@@ -47,7 +47,14 @@ void main() async {
 
   sharedPreferences = await SharedPreferences.getInstance();
   uguisuDatabase = UguisuDatabase();
-  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicolivePrograms).insert(UguisuNicoliveProgramsCompanion.insert(title: 'My Title', fetchedAt: DateTime.now()));
+  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicolivePrograms).insert(
+    UguisuNicoliveProgramsCompanion.insert(
+      serviceId: 'nicolive',
+      programId: 'lv000000000',
+      title: 'My Title',
+      fetchedAt: DateTime.now(),
+    )
+  );
 
   if (isDesktopEnvironment()) {
     await windowManager.ensureInitialized();
