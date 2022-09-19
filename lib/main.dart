@@ -896,7 +896,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     this.livePageUrl = livePageUrl;
 
     Future(() async {
-      await simpleClient?.stop();
+      await simpleClient?.disconnect();
       setState(() {
         livePage = null;
         scheduleMessage = null;
@@ -926,8 +926,13 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             Future(() async {
               var cm = chatMessage;
 
-              if (chatMessage is LazyNormalChatMessage) {
-                cm = await chatMessage.resolve();
+              if (cm is LazyNormalChatMessage) {
+                cm = await cm.resolve();
+              }
+
+              if (cm is DisconnectChatMessage) {
+                logger?.info('Close websocket connection due to the disconnect chat message (No. ${cm.chatMessage.no})');
+                simpleClient?.disconnect();
               }
 
               setState(() {
@@ -1015,7 +1020,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     super.dispose();
 
     Future(() async {
-      await simpleClient?.stop();
+      await simpleClient?.disconnect();
     });
   }
 
