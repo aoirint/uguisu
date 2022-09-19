@@ -926,8 +926,13 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             Future(() async {
               var cm = chatMessage;
 
-              if (chatMessage is LazyNormalChatMessage) {
-                cm = await chatMessage.resolve();
+              if (cm is LazyNormalChatMessage) {
+                cm = await cm.resolve();
+              }
+
+              if (cm is DisconnectChatMessage) {
+                logger?.info('Close websocket connection due to the disconnect chat message (No. ${cm.chatMessage.no})');
+                simpleClient?.stop();
               }
 
               setState(() {
