@@ -13,6 +13,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:uguisu/api/niconico/niconico.dart';
+import 'package:uguisu/database/uguisu_database.dart';
 import 'package:uguisu/widgets/config/config.dart';
 import 'package:uguisu/widgets/niconico/niconico.dart';
 import 'package:window_manager/window_manager.dart';
@@ -22,6 +23,7 @@ final mainLogger = Logger('com.aoirint.uguisu');
 
 NiconicoLiveSimpleClient? simpleClient;
 SharedPreferences? sharedPreferences;
+UguisuDatabase? uguisuDatabase;
 
 const windowOpacityDefaultValue = 1.0;
 const alwaysOnTopDefaultValue = false;
@@ -44,6 +46,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   sharedPreferences = await SharedPreferences.getInstance();
+  uguisuDatabase = UguisuDatabase();
+  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicolivePrograms).insert(UguisuNicoliveProgramsCompanion.insert(title: 'My Title', fetchedAt: DateTime.now()));
 
   if (isDesktopEnvironment()) {
     await windowManager.ensureInitialized();
