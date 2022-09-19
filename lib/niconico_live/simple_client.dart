@@ -244,7 +244,7 @@ class NiconicoLiveSimpleClient {
     this.watchClient = watchClient;
   }
 
-  Future<void> stop() async {
+  Future<void> disconnect() async {
     for (final room in rooms) {
       await room.commentClient.stop();
     }

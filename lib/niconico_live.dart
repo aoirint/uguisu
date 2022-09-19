@@ -212,7 +212,7 @@ Future<void> main(List<String> args) async {
         await Future.delayed(const Duration(milliseconds: 10));
       }
     } finally {
-      await simpleClient.stop();
+      await simpleClient.disconnect();
     }
   } finally {
     await simpleServer.stop();
