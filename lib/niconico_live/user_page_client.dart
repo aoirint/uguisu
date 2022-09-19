@@ -22,7 +22,7 @@ class NiconicoUserPageClient {
   late Logger logger;
 
   NiconicoUserPageClient() {
-    logger = Logger('NiconicoUserPageClient');
+    logger = Logger('com.aoirint.uguisu.niconico_live.NiconicoUserPageClient#$hashCode');
   }
 
   Future<NiconicoUserPage> get({

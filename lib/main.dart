@@ -13,6 +13,8 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:uguisu/api/niconico/niconico.dart';
 import 'package:uguisu/database/uguisu_database.dart';
+import 'package:uguisu/niconico_live/community_icon_cache_client.dart';
+import 'package:uguisu/niconico_live/community_icon_client.dart';
 import 'package:uguisu/widgets/config/config.dart';
 import 'package:uguisu/widgets/niconico/niconico.dart';
 import 'package:window_manager/window_manager.dart';
@@ -103,16 +105,26 @@ Future<void> applyAndSaveConfig({required Config config}) async {
 
 // User icon cache
 Future<String?> getUserIconPath(int userId) async {
-  final userIconCache = await (
-    uguisuDatabase!.select(uguisuDatabase!.uguisuNicoliveUserIconCaches)
-      ..where((tbl) => tbl.user.equals(userId))
+  final uguisuNicoliveUserIconCaches = uguisuDatabase!.uguisuNicoliveUserIconCaches;
+  final uguisuNicoliveUsers = uguisuDatabase!.uguisuNicoliveUsers;
+
+  final joinedResult = await (
+    (uguisuDatabase!.select(uguisuNicoliveUserIconCaches).join([
+      innerJoin(
+        uguisuNicoliveUsers,
+        uguisuNicoliveUserIconCaches.user.equalsExp(uguisuNicoliveUsers.id),
+        useColumns: false,
+      ),
+    ]))
+      ..where(uguisuNicoliveUsers.serviceId.equals('nicolive') & uguisuNicoliveUsers.userId.equals(userId))
   ).getSingleOrNull();
 
-  if (userIconCache == null) {
+  if (joinedResult == null) {
     mainLogger.warning('Cache-miss for user_icon/$userId');
     return null;
   }
 
+  final userIconCache = joinedResult.readTable(uguisuNicoliveUserIconCaches);
   return userIconCache.path;
 }
 
@@ -159,6 +171,9 @@ Future<NiconicoUserIconCache?> loadUserIconCache(int userId) async {
 }
 
 Future<void> saveUserIconCache(NiconicoUserIconCache userIcon) async {
+  final uguisuNicoliveUserIconCaches = uguisuDatabase!.uguisuNicoliveUserIconCaches;
+  final uguisuNicoliveUsers = uguisuDatabase!.uguisuNicoliveUsers;
+
   final userId = userIcon.userId;
   final contentType = userIcon.userIcon.contentType;
 
@@ -175,13 +190,122 @@ Future<void> saveUserIconCache(NiconicoUserIconCache userIcon) async {
   await iconFile.parent.create(recursive: true);
   await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
 
-  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicoliveUserIconCaches).insert(
+  final userPageCache = await (uguisuDatabase!.select(uguisuNicoliveUsers)..where((tbl) => tbl.userId.equals(userId))).getSingleOrNull();
+  if (userPageCache == null) {
+    throw Exception('User page cache not found for user/$userId');
+  }
+
+  await uguisuDatabase!.into(uguisuNicoliveUserIconCaches).insert(
     UguisuNicoliveUserIconCachesCompanion.insert(
-      user: userIcon.userId,
+      user: userPageCache.id,
       contentType: userIcon.userIcon.contentType,
       path: iconFile.path,
       uploadedAt: Value(userIcon.iconUploadedAt),
       fetchedAt: userIcon.iconFetchedAt,
+    ),
+    mode: InsertMode.insertOrReplace,
+  );
+}
+
+// Community icon cache
+Future<String?> getCommunityIconPath(String communityId) async {
+  final uguisuNicoliveCommunityIconCaches = uguisuDatabase!.uguisuNicoliveCommunityIconCaches;
+  final uguisuNicoliveCommunities = uguisuDatabase!.uguisuNicoliveCommunities;
+
+  final joinedResult = await (
+    (uguisuDatabase!.select(uguisuNicoliveCommunities).join([
+      innerJoin(
+        uguisuNicoliveCommunities,
+        uguisuNicoliveCommunityIconCaches.community.equalsExp(uguisuNicoliveCommunities.id),
+        useColumns: false,
+      ),
+    ]))
+      ..where(uguisuNicoliveCommunities.serviceId.equals('nicolive') & uguisuNicoliveCommunities.communityId.equals(communityId))
+  ).getSingleOrNull();
+
+  if (joinedResult == null) {
+    mainLogger.warning('Cache-miss for community_icon/$communityId');
+    return null;
+  }
+
+  final communityIconCache = joinedResult.readTable(uguisuNicoliveCommunityIconCaches);
+  return communityIconCache.path;
+}
+
+Future<NiconicoCommunityIconCache?> loadCommunityIconCache(String communityId) async {
+  final uguisuNicoliveCommunityIconCaches = uguisuDatabase!.uguisuNicoliveCommunityIconCaches;
+  final uguisuNicoliveCommunities = uguisuDatabase!.uguisuNicoliveCommunities;
+
+  final joinedResult = await (
+    (uguisuDatabase!.select(uguisuNicoliveCommunityIconCaches).join([
+      innerJoin(
+        uguisuNicoliveCommunities,
+        uguisuNicoliveCommunityIconCaches.community.equalsExp(uguisuNicoliveCommunities.id),
+      ),
+    ]))
+      ..where(uguisuNicoliveCommunities.serviceId.equals('nicolive') & uguisuNicoliveCommunities.communityId.equals(communityId))
+  ).getSingleOrNull();
+
+  if (joinedResult == null) {
+    mainLogger.warning('Cache-miss for community_icon/$communityId');
+    return null;
+  }
+
+  final userIconCache = joinedResult.readTable(uguisuNicoliveCommunityIconCaches);
+  final user = joinedResult.readTable(uguisuNicoliveCommunities);
+
+  final iconFile = File(userIconCache.path);
+  if (! await iconFile.exists()) {
+    mainLogger.warning('Unexpected cache-miss for community_icon/$communityId. User icon image file not exists');
+    return null;
+  }
+
+  final iconBytes = await iconFile.readAsBytes();
+
+  return NiconicoCommunityIconCache(
+    communityId: communityId,
+    communityIcon: NiconicoCommunityIcon(
+      iconUri: Uri.parse(user.iconUrl),
+      contentType: userIconCache.contentType,
+      iconBytes: iconBytes,
+    ),
+    iconUploadedAt: userIconCache.uploadedAt,
+    iconFetchedAt: userIconCache.fetchedAt,
+  );
+}
+
+Future<void> saveCommunityIconCache(NiconicoCommunityIconCache communityIcon) async {
+  final uguisuNicoliveCommunityIconCaches = uguisuDatabase!.uguisuNicoliveCommunityIconCaches;
+  final uguisuNicoliveCommunities = uguisuDatabase!.uguisuNicoliveCommunities;
+
+  final communityId = communityIcon.communityId;
+  final contentType = communityIcon.communityIcon.contentType;
+
+  String? iconFileNameSuffix;
+  if (contentType == 'image/png') iconFileNameSuffix = '.png';
+  if (contentType == 'image/jpeg') iconFileNameSuffix = '.jpg';
+  if (contentType == 'image/gif') iconFileNameSuffix = '.gif';
+  if (iconFileNameSuffix == null) {
+    throw Exception('Unsupported content type: $contentType');
+  }
+
+  final appSupportDir = await getApplicationSupportDirectory();
+  final iconFile = File(path.join(appSupportDir.path, 'cache/community_icon/$communityId$iconFileNameSuffix'));
+  await iconFile.parent.create(recursive: true);
+  await iconFile.writeAsBytes(communityIcon.communityIcon.iconBytes, flush: true);
+
+  final community = await (uguisuDatabase!.select(uguisuNicoliveCommunities)..where((tbl) => tbl.communityId.equals(communityId))).getSingleOrNull();
+  if (community == null) {
+    throw Exception('Community cache not found for community/$communityId');
+  }
+
+  await uguisuDatabase!.into(uguisuNicoliveCommunityIconCaches).insert(
+    UguisuNicoliveCommunityIconCachesCompanion.insert(
+      community: community.id,
+      contentType: communityIcon.communityIcon.contentType,
+      path: iconFile.path,
+      uploadedAt: Value(communityIcon.iconUploadedAt),
+      fetchedAt: communityIcon.iconFetchedAt,
     ),
     mode: InsertMode.insertOrReplace,
   );
@@ -205,8 +329,6 @@ Future<void> initSimpleClient({
 
   await simpleClient!.initialize(
     loginCookie: loginCookie,
-    userIconLoadCacheOrNull: loadUserIconCache,
-    userIconSaveCache: saveUserIconCache,
     getUserPageUri: getUserPageUri,
     userPageLoadCacheOrNull: (userId) async {
       final userPageCache = await (
@@ -243,97 +365,109 @@ Future<void> initSimpleClient({
         mode: InsertMode.insertOrReplace,
       );
     },
+    userIconLoadCacheOrNull: loadUserIconCache,
+    userIconSaveCache: saveUserIconCache,
+    communityIconLoadCacheOrNull: loadCommunityIconCache,
+    communityIconSaveCache: saveCommunityIconCache,
   );
 }
 
 // Live Page
-Future<File> getLivePageCachePath({
-  required String communityId,
-  required String liveId,
-}) async {
-  final appSupportDir = await getApplicationSupportDirectory();
-  return File(path.join(appSupportDir.path, 'cache', 'live_page', communityId, '$liveId.json'));
-}
-
 Future<NiconicoLivePage?> loadLivePage({
-  required File file,
+  required String programId,
 }) async {
-  if (! file.existsSync()) {
+  final uguisuNicolivePrograms = uguisuDatabase!.uguisuNicolivePrograms;
+  final uguisuNicoliveUsers = uguisuDatabase!.uguisuNicoliveUsers;
+  final uguisuNicoliveCommunities = uguisuDatabase!.uguisuNicoliveCommunities;
+
+  final joinedResult = await (
+    (uguisuDatabase!.select(uguisuNicolivePrograms).join([
+      innerJoin(
+        uguisuNicoliveUsers,
+        uguisuNicolivePrograms.community.equalsExp(uguisuNicoliveCommunities.id),
+      ),
+      innerJoin(
+        uguisuNicoliveCommunities,
+        uguisuNicolivePrograms.user.equalsExp(uguisuNicoliveUsers.id),
+      ),
+    ]))
+      ..where(uguisuNicolivePrograms.serviceId.equals('nicolive') & uguisuNicolivePrograms.programId.equals(programId))
+  ).getSingleOrNull();
+
+  if (joinedResult == null) {
+    mainLogger.warning('Cache-miss for program/$programId');
     return null;
   }
 
-  final rawJson = await file.readAsString(encoding: utf8);
-  final json = jsonDecode(rawJson);
-
-  if (json['version'] != '1') {
-    mainLogger.warning('Unsupported live page cache json version. Ignore this: ${file.path}');
-    return null;
-  }
-
-  final webSocketUrl = json['webSocketUrl'];
-
-  final program = json['program'];
-  final programTitle = program['title'];
-  final programNicoliveProgramId = program['nicoliveProgramId'];
-  final programProviderType = program['providerType'];
-  final programVisualProviderType = program['visualProviderType'];
-
-  final programSupplier = program['supplier'];
-  final programSupplierName = programSupplier['name'];
-  final programSupplierProgramProviderId = programSupplier['programProviderId'];
-
-  final programBeginTime = program['beginTime'];
-  final programEndTime = program['endTime'];
-
-  final socialGroup = json['socialGroup'];
-  final socialGroupId = socialGroup['id'];
-  final socialGroupName = socialGroup['name'];
+  final livePageCache = joinedResult.readTable(uguisuNicolivePrograms);
+  final supplierUser = joinedResult.readTable(uguisuNicoliveUsers);
+  final supplierCommunity = joinedResult.readTable(uguisuNicoliveCommunities);
 
   return NiconicoLivePage(
-    webSocketUrl: webSocketUrl,
+    webSocketUrl: livePageCache.webSocketUrl,
     program: NiconicoLivePageProgram(
-      title: programTitle,
-      nicoliveProgramId: programNicoliveProgramId,
-      providerType: programProviderType,
-      visualProviderType: programVisualProviderType,
+      title: livePageCache.title,
+      nicoliveProgramId: programId,
+      providerType: livePageCache.providerType,
+      visualProviderType: livePageCache.visualProviderType,
       supplier: NiconicoLivePageProgramSupplier(
-        name: programSupplierName,
-        programProviderId: programSupplierProgramProviderId,
+        name: supplierUser.nickname,
+        programProviderId: supplierUser.userId.toString(),
       ),
-      beginTime: programBeginTime,
-      endTime: programEndTime,
+      beginTime: (livePageCache.beginTime.millisecondsSinceEpoch / 1000).floor(), // in seconds
+      endTime: (livePageCache.endTime.millisecondsSinceEpoch / 1000).floor(), // in seconds
     ),
     socialGroup: NiconicoLivePageSocialGroup(
-      id: socialGroupId,
-      name: socialGroupName,
+      id: supplierCommunity.communityId,
+      name: supplierCommunity.name,
+      iconUrl: supplierCommunity.iconUrl,
     ),
+    pageFetchedAt: livePageCache.fetchedAt,
   );
 }
 
 Future<void> saveLivePage({
   required NiconicoLivePage livePage,
-  required File file,
 }) async {
-  final rawJson = jsonEncode({
-    'version': '1',
-    'webSocketUrl': livePage.webSocketUrl,
-    'program': {
-      'title': livePage.program.title,
-      'supplier': {
-        'name': livePage.program.supplier.name,
-        'programProviderId': livePage.program.supplier.programProviderId,
-      },
-      'beginTime': livePage.program.beginTime,
-      'endTime': livePage.program.endTime,
-    },
-    'socialGroup': {
-      'id': livePage.socialGroup.id,
-      'name': livePage.socialGroup.name,
-    },
-  });
+  final userId = int.parse(livePage.program.supplier.programProviderId);
+  final userPageUri = await simpleClient!.getUserPageUri!.call(userId);
 
-  await file.parent.create(recursive: true);
-  await file.writeAsString(rawJson, encoding: utf8, flush: true);
+  await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: userId, userPageUri: userPageUri);
+
+  final userPageCache =  await (uguisuDatabase!.select(uguisuDatabase!.uguisuNicoliveUsers)
+    ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.userId.equals(userId))
+  ).getSingle();
+
+  final communityId = livePage.socialGroup.id;
+  final communityCache =  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicoliveCommunities).insertReturning(
+    UguisuNicoliveCommunitiesCompanion.insert(
+      serviceId: 'nicolive',
+      communityId: communityId,
+      name: livePage.socialGroup.name,
+      iconUrl: livePage.socialGroup.iconUrl,
+      fetchedAt: livePage.pageFetchedAt,
+    ),
+    mode: InsertMode.insertOrReplace,
+  );
+
+  // await simpleClient!.communityIconCacheClient!.loadOrFetchIcon(communityId: communityId, iconUri: Uri.parse(livePage.socialGroup.iconUrl));
+
+  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicolivePrograms).insert(
+    UguisuNicoliveProgramsCompanion.insert(
+      serviceId: 'nicolive',
+      programId: livePage.program.nicoliveProgramId,
+      title: livePage.program.title,
+      providerType: livePage.program.providerType,
+      visualProviderType: livePage.program.visualProviderType,
+      beginTime: DateTime.fromMillisecondsSinceEpoch(livePage.program.endTime * 1000, isUtc: true),
+      endTime: DateTime.fromMillisecondsSinceEpoch(livePage.program.endTime * 1000, isUtc: true),
+      user: userPageCache.id,
+      community: communityCache.id,
+      webSocketUrl: livePage.webSocketUrl,
+      fetchedAt: livePage.pageFetchedAt,
+    ),
+    mode: InsertMode.insertOrReplace,
+  );
 }
 
 // Live Comment
@@ -780,6 +914,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   NiconicoLivePage? livePage;
   NiconicoUserPageCache? livePageSupplierUserPageCache;
   NiconicoUserIconCache? livePageSupplierUserIconCache;
+  NiconicoCommunityIconCache? livePageSupplierCommunityIconCache;
   ScheduleMessage? scheduleMessage;
   StatisticsMessage? statisticsMessage;
   List<BaseChatMessage> chatMessages = [];
@@ -877,6 +1012,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         await initSimpleClient(
           loginCookie: loginCookie,
         );
+
         await simpleClient!.connect(
           livePageUrl: livePageUrl,
           onScheduleMessage: (scheduleMessage) {
@@ -920,23 +1056,23 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             }
           }
         );
-        
-        final liveUserId = int.parse(simpleClient!.livePage!.program.supplier.programProviderId);
+        final livePage = simpleClient!.livePage!;
+
+        final liveUserId = int.parse(livePage.program.supplier.programProviderId);
         final livePageSupplierUserPageCache = await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: liveUserId, userPageUri: await simpleClient!.getUserPageUri!.call(liveUserId));
         final livePageSupplierUserIconCache = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(userId: liveUserId, iconUri: Uri.parse(livePageSupplierUserPageCache.userPage.iconUrl));
 
         await saveLivePage(
-          livePage: simpleClient!.livePage!,
-          file: await getLivePageCachePath(
-            communityId: simpleClient!.livePage!.socialGroup.id,
-            liveId: simpleClient!.livePage!.program.nicoliveProgramId,
-          ),
+          livePage: livePage,
         );
 
+        final livePageSupplierCommunityIconCache = await simpleClient!.communityIconCacheClient!.loadOrFetchIcon(communityId: livePage.socialGroup.id, iconUri: Uri.parse(livePage.socialGroup.iconUrl));
+
         setState(() {
-          livePage = simpleClient!.livePage;
+          this.livePage = livePage;
           this.livePageSupplierUserPageCache = livePageSupplierUserPageCache;
           this.livePageSupplierUserIconCache = livePageSupplierUserIconCache;
+          this.livePageSupplierCommunityIconCache = livePageSupplierCommunityIconCache;
         });
 
         // Load cached live comments for reconnecting

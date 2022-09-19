@@ -673,7 +673,6 @@ class UguisuNicoliveCommunitie extends DataClass
   final String communityId;
   final String name;
   final String iconUrl;
-  final String iconContentType;
   final DateTime fetchedAt;
   const UguisuNicoliveCommunitie(
       {required this.id,
@@ -681,7 +680,6 @@ class UguisuNicoliveCommunitie extends DataClass
       required this.communityId,
       required this.name,
       required this.iconUrl,
-      required this.iconContentType,
       required this.fetchedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -691,7 +689,6 @@ class UguisuNicoliveCommunitie extends DataClass
     map['community_id'] = Variable<String>(communityId);
     map['name'] = Variable<String>(name);
     map['icon_url'] = Variable<String>(iconUrl);
-    map['icon_content_type'] = Variable<String>(iconContentType);
     map['fetched_at'] = Variable<DateTime>(fetchedAt);
     return map;
   }
@@ -703,7 +700,6 @@ class UguisuNicoliveCommunitie extends DataClass
       communityId: Value(communityId),
       name: Value(name),
       iconUrl: Value(iconUrl),
-      iconContentType: Value(iconContentType),
       fetchedAt: Value(fetchedAt),
     );
   }
@@ -717,7 +713,6 @@ class UguisuNicoliveCommunitie extends DataClass
       communityId: serializer.fromJson<String>(json['communityId']),
       name: serializer.fromJson<String>(json['name']),
       iconUrl: serializer.fromJson<String>(json['iconUrl']),
-      iconContentType: serializer.fromJson<String>(json['iconContentType']),
       fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
     );
   }
@@ -730,7 +725,6 @@ class UguisuNicoliveCommunitie extends DataClass
       'communityId': serializer.toJson<String>(communityId),
       'name': serializer.toJson<String>(name),
       'iconUrl': serializer.toJson<String>(iconUrl),
-      'iconContentType': serializer.toJson<String>(iconContentType),
       'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
     };
   }
@@ -741,7 +735,6 @@ class UguisuNicoliveCommunitie extends DataClass
           String? communityId,
           String? name,
           String? iconUrl,
-          String? iconContentType,
           DateTime? fetchedAt}) =>
       UguisuNicoliveCommunitie(
         id: id ?? this.id,
@@ -749,7 +742,6 @@ class UguisuNicoliveCommunitie extends DataClass
         communityId: communityId ?? this.communityId,
         name: name ?? this.name,
         iconUrl: iconUrl ?? this.iconUrl,
-        iconContentType: iconContentType ?? this.iconContentType,
         fetchedAt: fetchedAt ?? this.fetchedAt,
       );
   @override
@@ -760,15 +752,14 @@ class UguisuNicoliveCommunitie extends DataClass
           ..write('communityId: $communityId, ')
           ..write('name: $name, ')
           ..write('iconUrl: $iconUrl, ')
-          ..write('iconContentType: $iconContentType, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, serviceId, communityId, name, iconUrl, iconContentType, fetchedAt);
+  int get hashCode =>
+      Object.hash(id, serviceId, communityId, name, iconUrl, fetchedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -778,7 +769,6 @@ class UguisuNicoliveCommunitie extends DataClass
           other.communityId == this.communityId &&
           other.name == this.name &&
           other.iconUrl == this.iconUrl &&
-          other.iconContentType == this.iconContentType &&
           other.fetchedAt == this.fetchedAt);
 }
 
@@ -789,7 +779,6 @@ class UguisuNicoliveCommunitiesCompanion
   final Value<String> communityId;
   final Value<String> name;
   final Value<String> iconUrl;
-  final Value<String> iconContentType;
   final Value<DateTime> fetchedAt;
   const UguisuNicoliveCommunitiesCompanion({
     this.id = const Value.absent(),
@@ -797,7 +786,6 @@ class UguisuNicoliveCommunitiesCompanion
     this.communityId = const Value.absent(),
     this.name = const Value.absent(),
     this.iconUrl = const Value.absent(),
-    this.iconContentType = const Value.absent(),
     this.fetchedAt = const Value.absent(),
   });
   UguisuNicoliveCommunitiesCompanion.insert({
@@ -806,13 +794,11 @@ class UguisuNicoliveCommunitiesCompanion
     required String communityId,
     required String name,
     required String iconUrl,
-    required String iconContentType,
     required DateTime fetchedAt,
   })  : serviceId = Value(serviceId),
         communityId = Value(communityId),
         name = Value(name),
         iconUrl = Value(iconUrl),
-        iconContentType = Value(iconContentType),
         fetchedAt = Value(fetchedAt);
   static Insertable<UguisuNicoliveCommunitie> custom({
     Expression<int>? id,
@@ -820,7 +806,6 @@ class UguisuNicoliveCommunitiesCompanion
     Expression<String>? communityId,
     Expression<String>? name,
     Expression<String>? iconUrl,
-    Expression<String>? iconContentType,
     Expression<DateTime>? fetchedAt,
   }) {
     return RawValuesInsertable({
@@ -829,7 +814,6 @@ class UguisuNicoliveCommunitiesCompanion
       if (communityId != null) 'community_id': communityId,
       if (name != null) 'name': name,
       if (iconUrl != null) 'icon_url': iconUrl,
-      if (iconContentType != null) 'icon_content_type': iconContentType,
       if (fetchedAt != null) 'fetched_at': fetchedAt,
     });
   }
@@ -840,7 +824,6 @@ class UguisuNicoliveCommunitiesCompanion
       Value<String>? communityId,
       Value<String>? name,
       Value<String>? iconUrl,
-      Value<String>? iconContentType,
       Value<DateTime>? fetchedAt}) {
     return UguisuNicoliveCommunitiesCompanion(
       id: id ?? this.id,
@@ -848,7 +831,6 @@ class UguisuNicoliveCommunitiesCompanion
       communityId: communityId ?? this.communityId,
       name: name ?? this.name,
       iconUrl: iconUrl ?? this.iconUrl,
-      iconContentType: iconContentType ?? this.iconContentType,
       fetchedAt: fetchedAt ?? this.fetchedAt,
     );
   }
@@ -871,9 +853,6 @@ class UguisuNicoliveCommunitiesCompanion
     if (iconUrl.present) {
       map['icon_url'] = Variable<String>(iconUrl.value);
     }
-    if (iconContentType.present) {
-      map['icon_content_type'] = Variable<String>(iconContentType.value);
-    }
     if (fetchedAt.present) {
       map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
     }
@@ -888,7 +867,6 @@ class UguisuNicoliveCommunitiesCompanion
           ..write('communityId: $communityId, ')
           ..write('name: $name, ')
           ..write('iconUrl: $iconUrl, ')
-          ..write('iconContentType: $iconContentType, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
@@ -929,12 +907,6 @@ class $UguisuNicoliveCommunitiesTable extends UguisuNicoliveCommunities
   late final GeneratedColumn<String> iconUrl = GeneratedColumn<String>(
       'icon_url', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  final VerificationMeta _iconContentTypeMeta =
-      const VerificationMeta('iconContentType');
-  @override
-  late final GeneratedColumn<String> iconContentType = GeneratedColumn<String>(
-      'icon_content_type', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
   final VerificationMeta _fetchedAtMeta = const VerificationMeta('fetchedAt');
   @override
   late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
@@ -942,7 +914,7 @@ class $UguisuNicoliveCommunitiesTable extends UguisuNicoliveCommunities
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, serviceId, communityId, name, iconUrl, iconContentType, fetchedAt];
+      [id, serviceId, communityId, name, iconUrl, fetchedAt];
   @override
   String get aliasedName => _alias ?? 'uguisu_nicolive_communities';
   @override
@@ -982,14 +954,6 @@ class $UguisuNicoliveCommunitiesTable extends UguisuNicoliveCommunities
     } else if (isInserting) {
       context.missing(_iconUrlMeta);
     }
-    if (data.containsKey('icon_content_type')) {
-      context.handle(
-          _iconContentTypeMeta,
-          iconContentType.isAcceptableOrUnknown(
-              data['icon_content_type']!, _iconContentTypeMeta));
-    } else if (isInserting) {
-      context.missing(_iconContentTypeMeta);
-    }
     if (data.containsKey('fetched_at')) {
       context.handle(_fetchedAtMeta,
           fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta));
@@ -1020,8 +984,6 @@ class $UguisuNicoliveCommunitiesTable extends UguisuNicoliveCommunities
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       iconUrl: attachedDatabase.options.types
           .read(DriftSqlType.string, data['${effectivePrefix}icon_url'])!,
-      iconContentType: attachedDatabase.options.types.read(
-          DriftSqlType.string, data['${effectivePrefix}icon_content_type'])!,
       fetchedAt: attachedDatabase.options.types
           .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
     );
@@ -1037,22 +999,27 @@ class UguisuNicoliveCommunityIconCache extends DataClass
     implements Insertable<UguisuNicoliveCommunityIconCache> {
   final int id;
   final int community;
-  final String iconContentType;
-  final String iconPath;
+  final String contentType;
+  final String path;
+  final DateTime? uploadedAt;
   final DateTime fetchedAt;
   const UguisuNicoliveCommunityIconCache(
       {required this.id,
       required this.community,
-      required this.iconContentType,
-      required this.iconPath,
+      required this.contentType,
+      required this.path,
+      this.uploadedAt,
       required this.fetchedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['community'] = Variable<int>(community);
-    map['icon_content_type'] = Variable<String>(iconContentType);
-    map['icon_path'] = Variable<String>(iconPath);
+    map['content_type'] = Variable<String>(contentType);
+    map['path'] = Variable<String>(path);
+    if (!nullToAbsent || uploadedAt != null) {
+      map['uploaded_at'] = Variable<DateTime>(uploadedAt);
+    }
     map['fetched_at'] = Variable<DateTime>(fetchedAt);
     return map;
   }
@@ -1061,8 +1028,11 @@ class UguisuNicoliveCommunityIconCache extends DataClass
     return UguisuNicoliveCommunityIconCachesCompanion(
       id: Value(id),
       community: Value(community),
-      iconContentType: Value(iconContentType),
-      iconPath: Value(iconPath),
+      contentType: Value(contentType),
+      path: Value(path),
+      uploadedAt: uploadedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uploadedAt),
       fetchedAt: Value(fetchedAt),
     );
   }
@@ -1073,8 +1043,9 @@ class UguisuNicoliveCommunityIconCache extends DataClass
     return UguisuNicoliveCommunityIconCache(
       id: serializer.fromJson<int>(json['id']),
       community: serializer.fromJson<int>(json['community']),
-      iconContentType: serializer.fromJson<String>(json['iconContentType']),
-      iconPath: serializer.fromJson<String>(json['iconPath']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      path: serializer.fromJson<String>(json['path']),
+      uploadedAt: serializer.fromJson<DateTime?>(json['uploadedAt']),
       fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
     );
   }
@@ -1084,8 +1055,9 @@ class UguisuNicoliveCommunityIconCache extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'community': serializer.toJson<int>(community),
-      'iconContentType': serializer.toJson<String>(iconContentType),
-      'iconPath': serializer.toJson<String>(iconPath),
+      'contentType': serializer.toJson<String>(contentType),
+      'path': serializer.toJson<String>(path),
+      'uploadedAt': serializer.toJson<DateTime?>(uploadedAt),
       'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
     };
   }
@@ -1093,14 +1065,16 @@ class UguisuNicoliveCommunityIconCache extends DataClass
   UguisuNicoliveCommunityIconCache copyWith(
           {int? id,
           int? community,
-          String? iconContentType,
-          String? iconPath,
+          String? contentType,
+          String? path,
+          Value<DateTime?> uploadedAt = const Value.absent(),
           DateTime? fetchedAt}) =>
       UguisuNicoliveCommunityIconCache(
         id: id ?? this.id,
         community: community ?? this.community,
-        iconContentType: iconContentType ?? this.iconContentType,
-        iconPath: iconPath ?? this.iconPath,
+        contentType: contentType ?? this.contentType,
+        path: path ?? this.path,
+        uploadedAt: uploadedAt.present ? uploadedAt.value : this.uploadedAt,
         fetchedAt: fetchedAt ?? this.fetchedAt,
       );
   @override
@@ -1108,8 +1082,9 @@ class UguisuNicoliveCommunityIconCache extends DataClass
     return (StringBuffer('UguisuNicoliveCommunityIconCache(')
           ..write('id: $id, ')
           ..write('community: $community, ')
-          ..write('iconContentType: $iconContentType, ')
-          ..write('iconPath: $iconPath, ')
+          ..write('contentType: $contentType, ')
+          ..write('path: $path, ')
+          ..write('uploadedAt: $uploadedAt, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
@@ -1117,15 +1092,16 @@ class UguisuNicoliveCommunityIconCache extends DataClass
 
   @override
   int get hashCode =>
-      Object.hash(id, community, iconContentType, iconPath, fetchedAt);
+      Object.hash(id, community, contentType, path, uploadedAt, fetchedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is UguisuNicoliveCommunityIconCache &&
           other.id == this.id &&
           other.community == this.community &&
-          other.iconContentType == this.iconContentType &&
-          other.iconPath == this.iconPath &&
+          other.contentType == this.contentType &&
+          other.path == this.path &&
+          other.uploadedAt == this.uploadedAt &&
           other.fetchedAt == this.fetchedAt);
 }
 
@@ -1133,38 +1109,43 @@ class UguisuNicoliveCommunityIconCachesCompanion
     extends UpdateCompanion<UguisuNicoliveCommunityIconCache> {
   final Value<int> id;
   final Value<int> community;
-  final Value<String> iconContentType;
-  final Value<String> iconPath;
+  final Value<String> contentType;
+  final Value<String> path;
+  final Value<DateTime?> uploadedAt;
   final Value<DateTime> fetchedAt;
   const UguisuNicoliveCommunityIconCachesCompanion({
     this.id = const Value.absent(),
     this.community = const Value.absent(),
-    this.iconContentType = const Value.absent(),
-    this.iconPath = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.path = const Value.absent(),
+    this.uploadedAt = const Value.absent(),
     this.fetchedAt = const Value.absent(),
   });
   UguisuNicoliveCommunityIconCachesCompanion.insert({
     this.id = const Value.absent(),
     required int community,
-    required String iconContentType,
-    required String iconPath,
+    required String contentType,
+    required String path,
+    this.uploadedAt = const Value.absent(),
     required DateTime fetchedAt,
   })  : community = Value(community),
-        iconContentType = Value(iconContentType),
-        iconPath = Value(iconPath),
+        contentType = Value(contentType),
+        path = Value(path),
         fetchedAt = Value(fetchedAt);
   static Insertable<UguisuNicoliveCommunityIconCache> custom({
     Expression<int>? id,
     Expression<int>? community,
-    Expression<String>? iconContentType,
-    Expression<String>? iconPath,
+    Expression<String>? contentType,
+    Expression<String>? path,
+    Expression<DateTime>? uploadedAt,
     Expression<DateTime>? fetchedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (community != null) 'community': community,
-      if (iconContentType != null) 'icon_content_type': iconContentType,
-      if (iconPath != null) 'icon_path': iconPath,
+      if (contentType != null) 'content_type': contentType,
+      if (path != null) 'path': path,
+      if (uploadedAt != null) 'uploaded_at': uploadedAt,
       if (fetchedAt != null) 'fetched_at': fetchedAt,
     });
   }
@@ -1172,14 +1153,16 @@ class UguisuNicoliveCommunityIconCachesCompanion
   UguisuNicoliveCommunityIconCachesCompanion copyWith(
       {Value<int>? id,
       Value<int>? community,
-      Value<String>? iconContentType,
-      Value<String>? iconPath,
+      Value<String>? contentType,
+      Value<String>? path,
+      Value<DateTime?>? uploadedAt,
       Value<DateTime>? fetchedAt}) {
     return UguisuNicoliveCommunityIconCachesCompanion(
       id: id ?? this.id,
       community: community ?? this.community,
-      iconContentType: iconContentType ?? this.iconContentType,
-      iconPath: iconPath ?? this.iconPath,
+      contentType: contentType ?? this.contentType,
+      path: path ?? this.path,
+      uploadedAt: uploadedAt ?? this.uploadedAt,
       fetchedAt: fetchedAt ?? this.fetchedAt,
     );
   }
@@ -1193,11 +1176,14 @@ class UguisuNicoliveCommunityIconCachesCompanion
     if (community.present) {
       map['community'] = Variable<int>(community.value);
     }
-    if (iconContentType.present) {
-      map['icon_content_type'] = Variable<String>(iconContentType.value);
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
     }
-    if (iconPath.present) {
-      map['icon_path'] = Variable<String>(iconPath.value);
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (uploadedAt.present) {
+      map['uploaded_at'] = Variable<DateTime>(uploadedAt.value);
     }
     if (fetchedAt.present) {
       map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
@@ -1210,8 +1196,9 @@ class UguisuNicoliveCommunityIconCachesCompanion
     return (StringBuffer('UguisuNicoliveCommunityIconCachesCompanion(')
           ..write('id: $id, ')
           ..write('community: $community, ')
-          ..write('iconContentType: $iconContentType, ')
-          ..write('iconPath: $iconPath, ')
+          ..write('contentType: $contentType, ')
+          ..write('path: $path, ')
+          ..write('uploadedAt: $uploadedAt, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
@@ -1241,17 +1228,22 @@ class $UguisuNicoliveCommunityIconCachesTable
       type: DriftSqlType.int,
       requiredDuringInsert: true,
       defaultConstraints: 'REFERENCES uguisu_nicolive_communities (id)');
-  final VerificationMeta _iconContentTypeMeta =
-      const VerificationMeta('iconContentType');
+  final VerificationMeta _contentTypeMeta =
+      const VerificationMeta('contentType');
   @override
-  late final GeneratedColumn<String> iconContentType = GeneratedColumn<String>(
-      'icon_content_type', aliasedName, false,
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+      'content_type', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  final VerificationMeta _iconPathMeta = const VerificationMeta('iconPath');
+  final VerificationMeta _pathMeta = const VerificationMeta('path');
   @override
-  late final GeneratedColumn<String> iconPath = GeneratedColumn<String>(
-      'icon_path', aliasedName, false,
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+      'path', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  final VerificationMeta _uploadedAtMeta = const VerificationMeta('uploadedAt');
+  @override
+  late final GeneratedColumn<DateTime> uploadedAt = GeneratedColumn<DateTime>(
+      'uploaded_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   final VerificationMeta _fetchedAtMeta = const VerificationMeta('fetchedAt');
   @override
   late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
@@ -1259,7 +1251,7 @@ class $UguisuNicoliveCommunityIconCachesTable
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, community, iconContentType, iconPath, fetchedAt];
+      [id, community, contentType, path, uploadedAt, fetchedAt];
   @override
   String get aliasedName => _alias ?? 'uguisu_nicolive_community_icon_caches';
   @override
@@ -1279,19 +1271,25 @@ class $UguisuNicoliveCommunityIconCachesTable
     } else if (isInserting) {
       context.missing(_communityMeta);
     }
-    if (data.containsKey('icon_content_type')) {
+    if (data.containsKey('content_type')) {
       context.handle(
-          _iconContentTypeMeta,
-          iconContentType.isAcceptableOrUnknown(
-              data['icon_content_type']!, _iconContentTypeMeta));
+          _contentTypeMeta,
+          contentType.isAcceptableOrUnknown(
+              data['content_type']!, _contentTypeMeta));
     } else if (isInserting) {
-      context.missing(_iconContentTypeMeta);
+      context.missing(_contentTypeMeta);
     }
-    if (data.containsKey('icon_path')) {
-      context.handle(_iconPathMeta,
-          iconPath.isAcceptableOrUnknown(data['icon_path']!, _iconPathMeta));
+    if (data.containsKey('path')) {
+      context.handle(
+          _pathMeta, path.isAcceptableOrUnknown(data['path']!, _pathMeta));
     } else if (isInserting) {
-      context.missing(_iconPathMeta);
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('uploaded_at')) {
+      context.handle(
+          _uploadedAtMeta,
+          uploadedAt.isAcceptableOrUnknown(
+              data['uploaded_at']!, _uploadedAtMeta));
     }
     if (data.containsKey('fetched_at')) {
       context.handle(_fetchedAtMeta,
@@ -1317,10 +1315,12 @@ class $UguisuNicoliveCommunityIconCachesTable
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       community: attachedDatabase.options.types
           .read(DriftSqlType.int, data['${effectivePrefix}community'])!,
-      iconContentType: attachedDatabase.options.types.read(
-          DriftSqlType.string, data['${effectivePrefix}icon_content_type'])!,
-      iconPath: attachedDatabase.options.types
-          .read(DriftSqlType.string, data['${effectivePrefix}icon_path'])!,
+      contentType: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}content_type'])!,
+      path: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}path'])!,
+      uploadedAt: attachedDatabase.options.types
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}uploaded_at']),
       fetchedAt: attachedDatabase.options.types
           .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
     );
@@ -1344,7 +1344,7 @@ class UguisuNicoliveProgram extends DataClass
   final DateTime endTime;
   final int user;
   final int community;
-  final String? webSocketUrl;
+  final String webSocketUrl;
   final DateTime fetchedAt;
   const UguisuNicoliveProgram(
       {required this.id,
@@ -1357,7 +1357,7 @@ class UguisuNicoliveProgram extends DataClass
       required this.endTime,
       required this.user,
       required this.community,
-      this.webSocketUrl,
+      required this.webSocketUrl,
       required this.fetchedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1372,9 +1372,7 @@ class UguisuNicoliveProgram extends DataClass
     map['end_time'] = Variable<DateTime>(endTime);
     map['user'] = Variable<int>(user);
     map['community'] = Variable<int>(community);
-    if (!nullToAbsent || webSocketUrl != null) {
-      map['web_socket_url'] = Variable<String>(webSocketUrl);
-    }
+    map['web_socket_url'] = Variable<String>(webSocketUrl);
     map['fetched_at'] = Variable<DateTime>(fetchedAt);
     return map;
   }
@@ -1391,9 +1389,7 @@ class UguisuNicoliveProgram extends DataClass
       endTime: Value(endTime),
       user: Value(user),
       community: Value(community),
-      webSocketUrl: webSocketUrl == null && nullToAbsent
-          ? const Value.absent()
-          : Value(webSocketUrl),
+      webSocketUrl: Value(webSocketUrl),
       fetchedAt: Value(fetchedAt),
     );
   }
@@ -1413,7 +1409,7 @@ class UguisuNicoliveProgram extends DataClass
       endTime: serializer.fromJson<DateTime>(json['endTime']),
       user: serializer.fromJson<int>(json['user']),
       community: serializer.fromJson<int>(json['community']),
-      webSocketUrl: serializer.fromJson<String?>(json['webSocketUrl']),
+      webSocketUrl: serializer.fromJson<String>(json['webSocketUrl']),
       fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
     );
   }
@@ -1431,7 +1427,7 @@ class UguisuNicoliveProgram extends DataClass
       'endTime': serializer.toJson<DateTime>(endTime),
       'user': serializer.toJson<int>(user),
       'community': serializer.toJson<int>(community),
-      'webSocketUrl': serializer.toJson<String?>(webSocketUrl),
+      'webSocketUrl': serializer.toJson<String>(webSocketUrl),
       'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
     };
   }
@@ -1447,7 +1443,7 @@ class UguisuNicoliveProgram extends DataClass
           DateTime? endTime,
           int? user,
           int? community,
-          Value<String?> webSocketUrl = const Value.absent(),
+          String? webSocketUrl,
           DateTime? fetchedAt}) =>
       UguisuNicoliveProgram(
         id: id ?? this.id,
@@ -1460,8 +1456,7 @@ class UguisuNicoliveProgram extends DataClass
         endTime: endTime ?? this.endTime,
         user: user ?? this.user,
         community: community ?? this.community,
-        webSocketUrl:
-            webSocketUrl.present ? webSocketUrl.value : this.webSocketUrl,
+        webSocketUrl: webSocketUrl ?? this.webSocketUrl,
         fetchedAt: fetchedAt ?? this.fetchedAt,
       );
   @override
@@ -1527,7 +1522,7 @@ class UguisuNicoliveProgramsCompanion
   final Value<DateTime> endTime;
   final Value<int> user;
   final Value<int> community;
-  final Value<String?> webSocketUrl;
+  final Value<String> webSocketUrl;
   final Value<DateTime> fetchedAt;
   const UguisuNicoliveProgramsCompanion({
     this.id = const Value.absent(),
@@ -1554,7 +1549,7 @@ class UguisuNicoliveProgramsCompanion
     required DateTime endTime,
     required int user,
     required int community,
-    this.webSocketUrl = const Value.absent(),
+    required String webSocketUrl,
     required DateTime fetchedAt,
   })  : serviceId = Value(serviceId),
         programId = Value(programId),
@@ -1565,6 +1560,7 @@ class UguisuNicoliveProgramsCompanion
         endTime = Value(endTime),
         user = Value(user),
         community = Value(community),
+        webSocketUrl = Value(webSocketUrl),
         fetchedAt = Value(fetchedAt);
   static Insertable<UguisuNicoliveProgram> custom({
     Expression<int>? id,
@@ -1608,7 +1604,7 @@ class UguisuNicoliveProgramsCompanion
       Value<DateTime>? endTime,
       Value<int>? user,
       Value<int>? community,
-      Value<String?>? webSocketUrl,
+      Value<String>? webSocketUrl,
       Value<DateTime>? fetchedAt}) {
     return UguisuNicoliveProgramsCompanion(
       id: id ?? this.id,
@@ -1756,8 +1752,8 @@ class $UguisuNicoliveProgramsTable extends UguisuNicolivePrograms
       const VerificationMeta('webSocketUrl');
   @override
   late final GeneratedColumn<String> webSocketUrl = GeneratedColumn<String>(
-      'web_socket_url', aliasedName, true,
-      type: DriftSqlType.string, requiredDuringInsert: false);
+      'web_socket_url', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
   final VerificationMeta _fetchedAtMeta = const VerificationMeta('fetchedAt');
   @override
   late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
@@ -1854,6 +1850,8 @@ class $UguisuNicoliveProgramsTable extends UguisuNicolivePrograms
           _webSocketUrlMeta,
           webSocketUrl.isAcceptableOrUnknown(
               data['web_socket_url']!, _webSocketUrlMeta));
+    } else if (isInserting) {
+      context.missing(_webSocketUrlMeta);
     }
     if (data.containsKey('fetched_at')) {
       context.handle(_fetchedAtMeta,
@@ -1895,7 +1893,7 @@ class $UguisuNicoliveProgramsTable extends UguisuNicolivePrograms
       community: attachedDatabase.options.types
           .read(DriftSqlType.int, data['${effectivePrefix}community'])!,
       webSocketUrl: attachedDatabase.options.types
-          .read(DriftSqlType.string, data['${effectivePrefix}web_socket_url']),
+          .read(DriftSqlType.string, data['${effectivePrefix}web_socket_url'])!,
       fetchedAt: attachedDatabase.options.types
           .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
     );

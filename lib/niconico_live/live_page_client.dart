@@ -9,10 +9,12 @@ import 'package:uguisu/niconico_live/cookie_util.dart';
 class NiconicoLivePageSocialGroup {
   String id; // community ID, co0000000
   String name;
+  String iconUrl;
 
   NiconicoLivePageSocialGroup({
     required this.id,
     required this.name,
+    required this.iconUrl,
   });
 }
 
@@ -50,11 +52,13 @@ class NiconicoLivePage {
   String webSocketUrl;
   NiconicoLivePageProgram program;
   NiconicoLivePageSocialGroup socialGroup;
+  DateTime pageFetchedAt;
 
   NiconicoLivePage({
     required this.webSocketUrl,
     required this.program,
     required this.socialGroup,
+    required this.pageFetchedAt,
   });
 }
 
@@ -70,6 +74,8 @@ class NiconicoLivePageClient {
     SweetCookieJar? cookieJar,
     required String userAgent,
   }) async {
+    final pageFetchedAt = DateTime.now().toUtc();
+
     final headers = {'User-Agent': userAgent};
     if (cookieJar != null) {headers['Cookie'] = formatCookieJarForRequestHeader(cookieJar);}
 
@@ -111,6 +117,7 @@ class NiconicoLivePageClient {
     final socialGroup = props['socialGroup'];
     final socialGroupId = socialGroup['id'];
     final socialGroupName = socialGroup['name'];
+    final socialGroupIconUrl = socialGroup['thumbnailImageUrl'];
 
     return NiconicoLivePage(
       webSocketUrl: webSocketUrl,
@@ -129,7 +136,9 @@ class NiconicoLivePageClient {
       socialGroup: NiconicoLivePageSocialGroup(
         id: socialGroupId,
         name: socialGroupName,
+        iconUrl: socialGroupIconUrl,
       ),
+      pageFetchedAt: pageFetchedAt,
     );
   }
 }

@@ -41,7 +41,6 @@ class UguisuNicoliveCommunities extends Table {
 
   TextColumn get name => text()();
   TextColumn get iconUrl => text()();
-  TextColumn get iconContentType => text()();
   DateTimeColumn get fetchedAt => dateTime()();
 
   @override
@@ -52,9 +51,10 @@ class UguisuNicoliveCommunityIconCaches extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get community => integer().references(UguisuNicoliveCommunities, #id)();
 
-  TextColumn get iconContentType => text()();
-  TextColumn get iconPath => text()();
+  TextColumn get contentType => text()();
+  TextColumn get path => text()();
 
+  DateTimeColumn get uploadedAt => dateTime().nullable()();
   DateTimeColumn get fetchedAt => dateTime()();
 
   @override
@@ -73,7 +73,7 @@ class UguisuNicolivePrograms extends Table {
   DateTimeColumn get endTime => dateTime()();
   IntColumn get user => integer().references(UguisuNicoliveUsers, #id)();
   IntColumn get community => integer().references(UguisuNicoliveCommunities, #id)();
-  TextColumn get webSocketUrl => text().nullable()();
+  TextColumn get webSocketUrl => text()(); // maybe empty string
   DateTimeColumn get fetchedAt => dateTime()();
 
   @override
