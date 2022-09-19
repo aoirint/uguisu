@@ -13,10 +13,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:uguisu/api/niconico/niconico.dart';
+import 'package:uguisu/widgets/config/config_dialog.dart';
 import 'package:uguisu/widgets/niconico/niconico.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 final mainLogger = Logger('com.aoirint.uguisu');
 
@@ -45,6 +45,16 @@ void main() async {
 
   sharedPreferences = await SharedPreferences.getInstance();
 
+  final windowOpacity = sharedPreferences!.getDouble('windowOpacity') ?? windowOpacityDefaultValue;
+  final alwaysOnTop = sharedPreferences!.getBool('alwaysOnTop') ?? alwaysOnTopDefaultValue;
+  final commentTimeFormatElapsed = sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue;
+
+  final initialConfig = Config(
+    windowOpacity: windowOpacity,
+    alwaysOnTop: alwaysOnTop,
+    commentTimeFormatElapsed: commentTimeFormatElapsed,
+  );
+
   if (isDesktopEnvironment()) {
     await windowManager.ensureInitialized();
 
@@ -61,17 +71,14 @@ void main() async {
       await windowManager.focus();
     });
 
-    final windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? windowOpacityDefaultValue;
-    windowManager.setOpacity(windowOpacityValue);
-
-    final alwaysOnTop = sharedPreferences!.getBool('alwaysOnTop') ?? alwaysOnTopDefaultValue;
+    windowManager.setOpacity(windowOpacity);
     windowManager.setAlwaysOnTop(alwaysOnTop);
   }
 
-  final loginCookie = await loadLoginCookie(file: await getLoginCookiePath());
-  await initSimpleClient(loginCookie: loginCookie);
+  final initialLoginCookie = await loadLoginCookie(file: await getLoginCookiePath());
+  await initSimpleClient(loginCookie: initialLoginCookie);
 
-  runApp(MyApp(initialLoginCookie: loginCookie));
+  runApp(MyApp(initialLoginCookie: initialLoginCookie, initialConfig: initialConfig));
 }
 
 bool isDesktopEnvironment() {
@@ -518,12 +525,25 @@ class NiconicoLoginCookieData with ChangeNotifier {
   }
 }
 
+class ConfigData with ChangeNotifier {
+  Config config;
+
+  ConfigData({required this.config});
+
+  void setConfig({required Config config}) {
+    this.config = config;
+    notifyListeners();
+  }
+}
+
 class MyApp extends StatelessWidget {
   final NiconicoLoginCookie? initialLoginCookie;
+  final Config initialConfig;
 
   const MyApp({
     super.key,
     this.initialLoginCookie,
+    required this.initialConfig,
   });
 
   // This widget is the root of your application.
@@ -533,6 +553,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => NiconicoLoginCookieData(loginCookie: initialLoginCookie)),
         ChangeNotifierProvider(create: (context) => NiconicoLoginUserData()),
+        ChangeNotifierProvider(create: (context) => ConfigData(config: initialConfig)),
       ],
       child: MaterialApp(
         title: 'Uguisu',
@@ -550,198 +571,9 @@ class MyApp extends StatelessWidget {
         ),
         routes: <String, WidgetBuilder>{
           '/': (_) => const NiconicoLivePageWidget(title: 'Uguisu Home'),
-          '/config': (_) => const NiconicoConfigWidget(),
+          '/config': (_) => const ConfigWidget(),
           '/config/login': (_) => const NiconicoLoginWidget(),
         },
-      ),
-    );
-  }
-}
-
-class NiconicoConfigWidget extends StatefulWidget {
-  const NiconicoConfigWidget({super.key});
-
-  @override
-  State<NiconicoConfigWidget> createState() => _NiconicoConfigWidgetState();
-}
-
-class _NiconicoConfigWidgetState extends State<NiconicoConfigWidget> {
-  double windowOpacityValue = windowOpacityDefaultValue;
-  bool alwaysOnTopValue = alwaysOnTopDefaultValue;
-  bool commentTimeFormatElapsedValue = commentTimeFormatElapsedDefaultValue;
-
-  @override
-  Widget build(BuildContext context) {
-    final loginCookieData = context.watch<NiconicoLoginCookieData>();
-    final loginUserData = context.watch<NiconicoLoginUserData>();
-
-    Future(() async {
-      setState(() {
-        windowOpacityValue = sharedPreferences!.getDouble('windowOpacity') ?? windowOpacityDefaultValue;
-        alwaysOnTopValue = sharedPreferences!.getBool('alwaysOnTop') ?? alwaysOnTopDefaultValue;
-        commentTimeFormatElapsedValue = sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue;
-      });
-    });
-
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Tooltip(
-                    message: '前の画面に戻る',
-                    child: ElevatedButton(
-                      child: const Padding(
-                        padding: EdgeInsets.all(6.0),
-                        child: Icon(Icons.arrow_back),
-                      ),
-                      onPressed: () async {
-                        Navigator.popUntil(context, ModalRoute.withName('/'));
-                      },
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text('設定', style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.bold))
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16.0),
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text('ログイン', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Tooltip(
-                    message: 'ニコニコ動画アカウントにログイン',
-                    child: ElevatedButton(
-                      child: const Padding(
-                        padding: EdgeInsets.all(6.0),
-                        child: Text('ニコニコ動画'),
-                      ),
-                      onPressed: () async {
-                        Navigator.pushNamed(context, '/config/login');
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8.0),
-                  loginCookieData.loginCookie != null ?
-                    const Tooltip(message: 'ログイン済み', child: Icon(Icons.done)) : 
-                    Column(),
-                  const SizedBox(width: 8.0),
-                  loginUserData.loginUser == null ? Column() : MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: () async {
-                        final url = 'https://www.nicovideo.jp/user/${loginUserData.loginUser!.loginUserPageCache.userId}';
-                        if (!await launchUrlString(url)) {
-                          throw Exception('Failed to open URL: $url');
-                        }
-                      },
-                      child: Tooltip(
-                        message: 'ユーザーページを開く',
-                        child: Row(
-                          children: [
-                            SizedBox(width: 32.0, height: 32.0, child: Image.memory(loginUserData.loginUser!.loginUserIconCache.userIcon.iconBytes)),
-                            const SizedBox(width: 8.0),
-                            Text('${loginUserData.loginUser!.loginUserPageCache.userPage.nickname} (ID: ${loginUserData.loginUser!.loginUserPageCache.userId})'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16.0),
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text('表示', style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold))
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  const Text('ウインドウの不透明度'),
-                  SizedBox(
-                    width: 200,
-                    child: Slider(
-                      min: 0.25,
-                      max: 1.0,
-                      divisions: 100,
-                      value: windowOpacityValue,
-                      onChanged: (newValue) {
-                        setState(() {
-                          windowOpacityValue = newValue;
-
-                          Future(() async {
-                            sharedPreferences!.setDouble('windowOpacity', windowOpacityValue);
-                            windowManager.setOpacity(windowOpacityValue);
-                          });
-                        });
-                      },
-                    ),
-                  ),
-                  Text('${(windowOpacityValue * 100).floor()} %'),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  const Text('常に手前に表示'),
-                  Switch(
-                    value: alwaysOnTopValue,
-                    onChanged: (newValue) {
-                      setState(() {
-                        alwaysOnTopValue = newValue;
-
-                        Future(() async {
-                          sharedPreferences!.setBool('alwaysOnTop', alwaysOnTopValue);
-                          windowManager.setAlwaysOnTop(alwaysOnTopValue);
-                        });
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  const Text('コメント投稿時間を番組経過時間で表示'),
-                  Switch(
-                    value: commentTimeFormatElapsedValue,
-                    onChanged: (newValue) {
-                      setState(() {
-                        commentTimeFormatElapsedValue = newValue;
-
-                        Future(() async {
-                          sharedPreferences!.setBool('commentTimeFormatElapsed', commentTimeFormatElapsedValue);
-                        });
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -836,6 +668,35 @@ class SimpleNiconicoMfaLoginResolver with NiconicoMfaLoginResolver {
     );
 
     return mfaLoginResult;
+  }
+}
+
+class ConfigWidget extends StatelessWidget {
+  const ConfigWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final loginCookie = context.watch<NiconicoLoginCookieData>().loginCookie;
+    final loginUser = context.watch<NiconicoLoginUserData>().loginUser;
+    final configData = context.watch<ConfigData>();
+
+    return ConfigDialog(
+      loginCookie: loginCookie,
+      loginUser: loginUser,
+      userPageUriResolver: SimpleNiconicoUserPageUriResolver(),
+      config: configData.config,
+      onChanged: ({required config}) async {
+        sharedPreferences!.setDouble('windowOpacity', config.windowOpacity);
+        windowManager.setOpacity(config.windowOpacity);
+
+        sharedPreferences!.setBool('alwaysOnTop', config.alwaysOnTop);
+        windowManager.setAlwaysOnTop(config.alwaysOnTop);
+
+        sharedPreferences!.setBool('commentTimeFormatElapsed', config.commentTimeFormatElapsed);
+
+        configData.setConfig(config: config);
+      },
+    );
   }
 }
 
@@ -1162,6 +1023,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   Widget build(BuildContext context) {
     final loginCookieData = context.watch<NiconicoLoginCookieData>();
     final loginUserData = context.watch<NiconicoLoginUserData>();
+    final configData = context.watch<ConfigData>();
 
     Future(() async {
       if (loginCookieData.loginCookie == null) {
@@ -1239,12 +1101,12 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             chatMessages: chatMessages,
             userLocalCachedIconImageFileResolver: SimpleNiconicoLocalCachedUserIconImageFileResolver(),
             userPageUriResolver: SimpleNiconicoUserPageUriResolver(),
-            commentTimeFormatElapsed: sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue, // FIXME: watch changes
-            commentTableRowHeight: sharedPreferences!.getDouble('commentTableRowHeight') ?? commentTableRowHeightDefaultValue, // FIXME: watch changes
-            commentTableNoWidth: sharedPreferences!.getDouble('commentTableNoWidth') ?? commentTableNoWidthDefaultValue, // FIXME: watch changes
-            commentTableUserIconWidth: sharedPreferences!.getDouble('commentTableUserIconWidth') ?? commentTableUserIconWidthDefaultValue, // FIXME: watch changes
-            commentTableUserNameWidth: sharedPreferences!.getDouble('commentTableUserNameWidth') ?? commentTableUserNameWidthDefaultValue, // FIXME: watch changes
-            commentTableTimeWidth: sharedPreferences!.getDouble('commentTableTimeWidth') ?? commentTableTimeWidthDefaultValue, // FIXME: watch changes
+            commentTimeFormatElapsed: configData.config.commentTimeFormatElapsed,
+            commentTableRowHeight: commentTableRowHeightDefaultValue,
+            commentTableNoWidth: commentTableNoWidthDefaultValue,
+            commentTableUserIconWidth: commentTableUserIconWidthDefaultValue,
+            commentTableUserNameWidth: commentTableUserNameWidthDefaultValue,
+            commentTableTimeWidth: commentTableTimeWidthDefaultValue,
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
