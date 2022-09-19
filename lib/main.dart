@@ -124,10 +124,10 @@ Future<NiconicoUserIconCache?> loadUserIconCache(int userId) async {
     (uguisuDatabase!.select(uguisuNicoliveUserIconCaches).join([
       innerJoin(
         uguisuNicoliveUsers,
-        uguisuNicoliveUserIconCaches.user.equalsExp(uguisuNicoliveUsers.userId),
+        uguisuNicoliveUserIconCaches.user.equalsExp(uguisuNicoliveUsers.id),
       ),
     ]))
-      ..where(uguisuNicoliveUserIconCaches.user.equals(userId))
+      ..where(uguisuNicoliveUsers.serviceId.equals('nicolive') & uguisuNicoliveUsers.userId.equals(userId))
   ).getSingleOrNull();
 
   if (joinedResult == null) {
