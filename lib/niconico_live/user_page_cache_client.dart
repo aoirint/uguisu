@@ -1,3 +1,4 @@
+import 'package:logging/logging.dart';
 import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 
 import 'user_page_client.dart';
@@ -20,12 +21,16 @@ class NiconicoUserPageCacheClient {
   Future<NiconicoUserPageCache?> Function(int userId) loadCacheOrNull;
   Future<void> Function(NiconicoUserPageCache userPage) saveCache;
 
+  late final Logger logger;
+
   NiconicoUserPageCacheClient({
     this.cookieJar,
     required this.userAgent,
     required this.loadCacheOrNull,
     required this.saveCache,
-  });
+  }) {
+    logger = Logger('com.aoirint.uguisu.niconico_live.NiconicoUserPageCacheClient#$hashCode');
+  }
 
   Future<NiconicoUserPageCache> loadOrFetchUserPage({
     required int userId,
@@ -35,6 +40,7 @@ class NiconicoUserPageCacheClient {
     if (cache != null) {
       return cache;
     }
+    logger.fine('UserPage Cache-miss for user/$userId');
 
     final now = DateTime.now();
     final userPage = await NiconicoUserPageClient().get(uri: userPageUri, cookieJar: cookieJar, userAgent: userAgent);

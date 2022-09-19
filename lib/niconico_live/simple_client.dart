@@ -3,6 +3,7 @@ import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
 import 'package:uguisu/main.dart';
 import 'package:uguisu/niconico_live/community_icon_cache_client.dart';
+import 'package:uguisu/niconico_live/community_page_cache_client.dart';
 import 'package:uguisu/niconico_live/user_page_cache_client.dart';
 import 'live_page_client.dart';
 import 'watch_client.dart';
@@ -162,6 +163,7 @@ class NiconicoLiveSimpleClient {
   NiconicoUserIconCacheClient? userIconCacheClient;
   
   Future<Uri> Function(String communityId)? getCommunityPageUri;
+  NiconicoCommunityPageCacheClient? communityPageCacheClient;
   NiconicoCommunityIconCacheClient? communityIconCacheClient;
 
   String? livePageUrl;
@@ -191,6 +193,9 @@ class NiconicoLiveSimpleClient {
     required Future<void> Function(NiconicoUserPageCache userPage) userPageSaveCache,
     required Future<NiconicoUserIconCache?> Function(int userId) userIconLoadCacheOrNull,
     required Future<void> Function(NiconicoUserIconCache userIcon) userIconSaveCache,
+    required Future<Uri> Function(String communityId) getCommunityPageUri,
+    required Future<NiconicoCommunityPageCache?> Function(String communityId) communityPageLoadCacheOrNull,
+    required Future<void> Function(NiconicoCommunityPageCache communityPage) communityPageSaveCache,
     required Future<NiconicoCommunityIconCache?> Function(String communityId) communityIconLoadCacheOrNull,
     required Future<void> Function(NiconicoCommunityIconCache communityIcon) communityIconSaveCache,
   }) async {
@@ -209,6 +214,15 @@ class NiconicoLiveSimpleClient {
       userAgent: userAgent,
       loadCacheOrNull: userIconLoadCacheOrNull,
       saveCache: userIconSaveCache,
+    );
+
+    this.getCommunityPageUri = getCommunityPageUri;
+
+    communityPageCacheClient = NiconicoCommunityPageCacheClient(
+      cookieJar: loginCookie?.cookieJar,
+      userAgent: userAgent,
+      loadCacheOrNull: communityPageLoadCacheOrNull,
+      saveCache: communityPageSaveCache,
     );
 
     communityIconCacheClient = NiconicoCommunityIconCacheClient(
@@ -302,9 +316,11 @@ class NiconicoLiveSimpleClient {
         if (userPageUri == null) {
           throw Exception('getUserPageUri != null');
         }
+        if (userPageCacheClient == null) { throw Exception('userPageCacheClient != null'); }
+        if (userIconCacheClient == null) { throw Exception('userIconCacheClient != null'); }
 
-        final userPageCache = await userPageCacheClient?.loadOrFetchUserPage(userId: userIdInt, userPageUri: userPageUri);
-        final userIconCache = userPageCache != null ? await userIconCacheClient?.loadOrFetchIcon(userId: userIdInt, iconUri: Uri.parse(userPageCache.userPage.iconUrl)) : null;
+        final userPageCache = await userPageCacheClient!.loadOrFetchUserPage(userId: userIdInt, userPageUri: userPageUri);
+        final userIconCache = await userIconCacheClient!.loadOrFetchIcon(userId: userIdInt, iconUri: Uri.parse(userPageCache.userPage.iconUrl));
 
         return CommentUser(userId: userIdInt, userPageCache: userPageCache, userIconCache: userIconCache);
       },);

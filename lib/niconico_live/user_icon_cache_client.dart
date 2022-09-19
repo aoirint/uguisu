@@ -1,3 +1,4 @@
+import 'package:logging/logging.dart';
 import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 
 import 'user_icon_client.dart';
@@ -22,12 +23,16 @@ class NiconicoUserIconCacheClient {
   Future<NiconicoUserIconCache?> Function(int userId) loadCacheOrNull;
   Future<void> Function(NiconicoUserIconCache userIcon) saveCache;
 
+  late final Logger logger;
+
   NiconicoUserIconCacheClient({
     this.cookieJar,
     required this.userAgent,
     required this.loadCacheOrNull,
     required this.saveCache,
-  });
+  }) {
+    logger = Logger('com.aoirint.uguisu.niconico_live.NiconicoUserIconCacheClient#$hashCode');
+  }
 
   Future<NiconicoUserIconCache> loadOrFetchIcon({
     required int userId,
@@ -37,6 +42,7 @@ class NiconicoUserIconCacheClient {
     if (cache != null) {
       return cache;
     }
+    logger.fine('UserIcon Cache-miss for user/$userId');
 
     final now = DateTime.now();
     final userIcon = await NiconicoUserIconClient().get(uri: iconUri, cookieJar: cookieJar, userAgent: userAgent);

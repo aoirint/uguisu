@@ -1,3 +1,4 @@
+import 'package:logging/logging.dart';
 import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
 
 import 'community_icon_client.dart';
@@ -22,12 +23,16 @@ class NiconicoCommunityIconCacheClient {
   Future<NiconicoCommunityIconCache?> Function(String communityId) loadCacheOrNull;
   Future<void> Function(NiconicoCommunityIconCache communityIcon) saveCache;
 
+  late final Logger logger;
+
   NiconicoCommunityIconCacheClient({
     this.cookieJar,
     required this.userAgent,
     required this.loadCacheOrNull,
     required this.saveCache,
-  });
+  }) {
+    logger = Logger('com.aoirint.uguisu.niconico_live.NiconicoCommunityIconCacheClient#$hashCode');
+  }
 
   Future<NiconicoCommunityIconCache> loadOrFetchIcon({
     required String communityId,
@@ -37,14 +42,12 @@ class NiconicoCommunityIconCacheClient {
     if (cache != null) {
       return cache;
     }
+    logger.fine('CommunityIcon Cache-miss for community/$communityId');
 
     final now = DateTime.now();
     final communityIcon = await NiconicoCommunityIconClient().get(uri: iconUri, cookieJar: cookieJar, userAgent: userAgent);
 
-    final uriQuery = iconUri.query; // '?' excluded
-    final iconUploadedAt = uriQuery != '' ? DateTime.fromMillisecondsSinceEpoch(int.parse(uriQuery) * 1000, isUtc: true) : null;
-
-    final fetchedCache = NiconicoCommunityIconCache(communityId: communityId, communityIcon: communityIcon, iconUploadedAt: iconUploadedAt, iconFetchedAt: now);
+    final fetchedCache = NiconicoCommunityIconCache(communityId: communityId, communityIcon: communityIcon, iconFetchedAt: now);
     await saveCache(fetchedCache);
 
     return fetchedCache;

@@ -19,6 +19,14 @@ abstract class NiconicoCommunityPageUriResolver {
   Future<Uri?> resolveCommunityPageUri({required String communityId});
 }
 
+abstract class NiconicoLocalCachedCommunityIconImageFileResolver {
+  Future<File?> resolveLocalCachedCommunityIconImageFile({required String communityId});
+}
+
+abstract class NiconicoCommunityIconImageBytesResolver {
+  Future<Uint8List>? resolveCommunityIconImageBytes({required String communityId});
+}
+
 abstract class NiconicoLivePageUriResolver {
   Future<Uri?> resolveLivePageUri({required String liveIdOrUrl});
 }
