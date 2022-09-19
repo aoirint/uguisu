@@ -101,61 +101,46 @@ Future<void> applyAndSaveConfig({required Config config}) async {
   sharedPreferences!.setBool('commentTimeFormatElapsed', config.commentTimeFormatElapsed);
 }
 
+// User icon cache
 Future<String?> getUserIconPath(int userId) async {
-  final appSupportDir = await getApplicationSupportDirectory();
-  final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
-  if (! await userIconJsonFile.exists()) {
-    mainLogger.warning('Cache-miss for user/$userId. User icon json not exists');
+  final userIconCache = await (
+    uguisuDatabase!.select(uguisuDatabase!.uguisuNicoliveUserIconCaches)
+      ..where((tbl) => tbl.user.equals(userId))
+  ).getSingleOrNull();
+
+  if (userIconCache == null) {
+    mainLogger.warning('Cache-miss for user_icon/$userId');
     return null;
   }
 
-  final userIconRawJson = await userIconJsonFile.readAsString(encoding: utf8);
-  final userIconJson = jsonDecode(userIconRawJson);
-
-  if (userIconJson['version'] != '1') {
-    mainLogger.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
-    return null;
-  }
-
-  final userIdInJson = userIconJson['userId'];
-  if (userIdInJson != userId) {
-    throw Exception('Invalid user icon json. userId does not match. given: $userId, json: $userIdInJson');
-  }
-
-  final String iconPath = userIconJson['iconPath'];
-  return iconPath;
+  return userIconCache.path;
 }
 
 Future<NiconicoUserIconCache?> loadUserIconCache(int userId) async {
-  final appSupportDir = await getApplicationSupportDirectory();
-  final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
-  if (! await userIconJsonFile.exists()) {
-    mainLogger.warning('Cache-miss for user/$userId. User icon json not exists');
+  final uguisuNicoliveUserIconCaches = uguisuDatabase!.uguisuNicoliveUserIconCaches;
+  final uguisuNicoliveUsers = uguisuDatabase!.uguisuNicoliveUsers;
+
+  final joinedResult = await (
+    (uguisuDatabase!.select(uguisuNicoliveUserIconCaches).join([
+      innerJoin(
+        uguisuNicoliveUsers,
+        uguisuNicoliveUserIconCaches.user.equalsExp(uguisuNicoliveUsers.userId),
+      ),
+    ]))
+      ..where(uguisuNicoliveUserIconCaches.user.equals(userId))
+  ).getSingleOrNull();
+
+  if (joinedResult == null) {
+    mainLogger.warning('Cache-miss for user_icon/$userId');
     return null;
   }
 
-  final userIconRawJson = await userIconJsonFile.readAsString(encoding: utf8);
-  final userIconJson = jsonDecode(userIconRawJson);
+  final userIconCache = joinedResult.readTable(uguisuNicoliveUserIconCaches);
+  final user = joinedResult.readTable(uguisuNicoliveUsers);
 
-  if (userIconJson['version'] != '1') {
-    mainLogger.warning('Unsupported user icon json version. Ignore this: ${userIconJsonFile.path}');
-    return null;
-  }
-
-  final userIdInJson = userIconJson['userId'];
-  if (userIdInJson != userId) {
-    throw Exception('Invalid user icon json. userId does not match. given: $userId, json: $userIdInJson');
-  }
-
-  final iconUri = Uri.parse(userIconJson['iconUri']);
-  final String contentType = userIconJson['contentType'];
-  final iconUploadedAt = userIconJson['iconUploadedAt'] != null ? DateTime.parse(userIconJson['iconUploadedAt']) : null;
-  final iconFetchedAt = DateTime.parse(userIconJson['iconFetchedAt']);
-  final String iconPath = userIconJson['iconPath'];
-
-  final iconFile = File(iconPath);
+  final iconFile = File(userIconCache.path);
   if (! await iconFile.exists()) {
-    mainLogger.warning('Unexpected cache-miss for user/$userId. User icon image not exists');
+    mainLogger.warning('Unexpected cache-miss for user_icon/$userId. User icon image file not exists');
     return null;
   }
 
@@ -164,12 +149,12 @@ Future<NiconicoUserIconCache?> loadUserIconCache(int userId) async {
   return NiconicoUserIconCache(
     userId: userId,
     userIcon: NiconicoUserIcon(
-      iconUri: iconUri,
-      contentType: contentType,
+      iconUri: Uri.parse(user.iconUrl),
+      contentType: userIconCache.contentType,
       iconBytes: iconBytes,
     ),
-    iconUploadedAt: iconUploadedAt,
-    iconFetchedAt: iconFetchedAt,
+    iconUploadedAt: userIconCache.uploadedAt,
+    iconFetchedAt: userIconCache.fetchedAt,
   );
 }
 
@@ -190,18 +175,16 @@ Future<void> saveUserIconCache(NiconicoUserIconCache userIcon) async {
   await iconFile.parent.create(recursive: true);
   await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
 
-  final userIconJsonFile = File(path.join(appSupportDir.path, 'cache/user_icon/$userId.json'));
-  final userIconRawJson = jsonEncode({
-    'version': '1',
-    'userId': userId,
-    'iconUri': userIcon.userIcon.iconUri.toString(),
-    'contentType': userIcon.userIcon.contentType,
-    'iconUploadedAt': userIcon.iconUploadedAt?.toIso8601String(),
-    'iconFetchedAt': userIcon.iconFetchedAt.toIso8601String(),
-    'iconPath': iconFile.path,
-  });
-
-  await userIconJsonFile.writeAsString(userIconRawJson, encoding: utf8, flush: true);
+  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicoliveUserIconCaches).insert(
+    UguisuNicoliveUserIconCachesCompanion.insert(
+      user: userIcon.userId,
+      contentType: userIcon.userIcon.contentType,
+      path: iconFile.path,
+      uploadedAt: Value(userIcon.iconUploadedAt),
+      fetchedAt: userIcon.iconFetchedAt,
+    ),
+    mode: InsertMode.insertOrReplace,
+  );
 }
 
 Future<void> initSimpleClient({

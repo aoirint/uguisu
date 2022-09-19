@@ -24,9 +24,10 @@ class UguisuNicoliveUserIconCaches extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get user => integer().references(UguisuNicoliveUsers, #id)();
 
-  TextColumn get iconContentType => text()();
-  TextColumn get iconPath => text()();
+  TextColumn get contentType => text()();
+  TextColumn get path => text()();
 
+  DateTimeColumn get uploadedAt => dateTime().nullable()();
   DateTimeColumn get fetchedAt => dateTime()();
 
   @override

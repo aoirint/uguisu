@@ -334,22 +334,27 @@ class UguisuNicoliveUserIconCache extends DataClass
     implements Insertable<UguisuNicoliveUserIconCache> {
   final int id;
   final int user;
-  final String iconContentType;
-  final String iconPath;
+  final String contentType;
+  final String path;
+  final DateTime? uploadedAt;
   final DateTime fetchedAt;
   const UguisuNicoliveUserIconCache(
       {required this.id,
       required this.user,
-      required this.iconContentType,
-      required this.iconPath,
+      required this.contentType,
+      required this.path,
+      this.uploadedAt,
       required this.fetchedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['user'] = Variable<int>(user);
-    map['icon_content_type'] = Variable<String>(iconContentType);
-    map['icon_path'] = Variable<String>(iconPath);
+    map['content_type'] = Variable<String>(contentType);
+    map['path'] = Variable<String>(path);
+    if (!nullToAbsent || uploadedAt != null) {
+      map['uploaded_at'] = Variable<DateTime>(uploadedAt);
+    }
     map['fetched_at'] = Variable<DateTime>(fetchedAt);
     return map;
   }
@@ -358,8 +363,11 @@ class UguisuNicoliveUserIconCache extends DataClass
     return UguisuNicoliveUserIconCachesCompanion(
       id: Value(id),
       user: Value(user),
-      iconContentType: Value(iconContentType),
-      iconPath: Value(iconPath),
+      contentType: Value(contentType),
+      path: Value(path),
+      uploadedAt: uploadedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(uploadedAt),
       fetchedAt: Value(fetchedAt),
     );
   }
@@ -370,8 +378,9 @@ class UguisuNicoliveUserIconCache extends DataClass
     return UguisuNicoliveUserIconCache(
       id: serializer.fromJson<int>(json['id']),
       user: serializer.fromJson<int>(json['user']),
-      iconContentType: serializer.fromJson<String>(json['iconContentType']),
-      iconPath: serializer.fromJson<String>(json['iconPath']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      path: serializer.fromJson<String>(json['path']),
+      uploadedAt: serializer.fromJson<DateTime?>(json['uploadedAt']),
       fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
     );
   }
@@ -381,8 +390,9 @@ class UguisuNicoliveUserIconCache extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'user': serializer.toJson<int>(user),
-      'iconContentType': serializer.toJson<String>(iconContentType),
-      'iconPath': serializer.toJson<String>(iconPath),
+      'contentType': serializer.toJson<String>(contentType),
+      'path': serializer.toJson<String>(path),
+      'uploadedAt': serializer.toJson<DateTime?>(uploadedAt),
       'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
     };
   }
@@ -390,14 +400,16 @@ class UguisuNicoliveUserIconCache extends DataClass
   UguisuNicoliveUserIconCache copyWith(
           {int? id,
           int? user,
-          String? iconContentType,
-          String? iconPath,
+          String? contentType,
+          String? path,
+          Value<DateTime?> uploadedAt = const Value.absent(),
           DateTime? fetchedAt}) =>
       UguisuNicoliveUserIconCache(
         id: id ?? this.id,
         user: user ?? this.user,
-        iconContentType: iconContentType ?? this.iconContentType,
-        iconPath: iconPath ?? this.iconPath,
+        contentType: contentType ?? this.contentType,
+        path: path ?? this.path,
+        uploadedAt: uploadedAt.present ? uploadedAt.value : this.uploadedAt,
         fetchedAt: fetchedAt ?? this.fetchedAt,
       );
   @override
@@ -405,8 +417,9 @@ class UguisuNicoliveUserIconCache extends DataClass
     return (StringBuffer('UguisuNicoliveUserIconCache(')
           ..write('id: $id, ')
           ..write('user: $user, ')
-          ..write('iconContentType: $iconContentType, ')
-          ..write('iconPath: $iconPath, ')
+          ..write('contentType: $contentType, ')
+          ..write('path: $path, ')
+          ..write('uploadedAt: $uploadedAt, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
@@ -414,15 +427,16 @@ class UguisuNicoliveUserIconCache extends DataClass
 
   @override
   int get hashCode =>
-      Object.hash(id, user, iconContentType, iconPath, fetchedAt);
+      Object.hash(id, user, contentType, path, uploadedAt, fetchedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is UguisuNicoliveUserIconCache &&
           other.id == this.id &&
           other.user == this.user &&
-          other.iconContentType == this.iconContentType &&
-          other.iconPath == this.iconPath &&
+          other.contentType == this.contentType &&
+          other.path == this.path &&
+          other.uploadedAt == this.uploadedAt &&
           other.fetchedAt == this.fetchedAt);
 }
 
@@ -430,38 +444,43 @@ class UguisuNicoliveUserIconCachesCompanion
     extends UpdateCompanion<UguisuNicoliveUserIconCache> {
   final Value<int> id;
   final Value<int> user;
-  final Value<String> iconContentType;
-  final Value<String> iconPath;
+  final Value<String> contentType;
+  final Value<String> path;
+  final Value<DateTime?> uploadedAt;
   final Value<DateTime> fetchedAt;
   const UguisuNicoliveUserIconCachesCompanion({
     this.id = const Value.absent(),
     this.user = const Value.absent(),
-    this.iconContentType = const Value.absent(),
-    this.iconPath = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.path = const Value.absent(),
+    this.uploadedAt = const Value.absent(),
     this.fetchedAt = const Value.absent(),
   });
   UguisuNicoliveUserIconCachesCompanion.insert({
     this.id = const Value.absent(),
     required int user,
-    required String iconContentType,
-    required String iconPath,
+    required String contentType,
+    required String path,
+    this.uploadedAt = const Value.absent(),
     required DateTime fetchedAt,
   })  : user = Value(user),
-        iconContentType = Value(iconContentType),
-        iconPath = Value(iconPath),
+        contentType = Value(contentType),
+        path = Value(path),
         fetchedAt = Value(fetchedAt);
   static Insertable<UguisuNicoliveUserIconCache> custom({
     Expression<int>? id,
     Expression<int>? user,
-    Expression<String>? iconContentType,
-    Expression<String>? iconPath,
+    Expression<String>? contentType,
+    Expression<String>? path,
+    Expression<DateTime>? uploadedAt,
     Expression<DateTime>? fetchedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (user != null) 'user': user,
-      if (iconContentType != null) 'icon_content_type': iconContentType,
-      if (iconPath != null) 'icon_path': iconPath,
+      if (contentType != null) 'content_type': contentType,
+      if (path != null) 'path': path,
+      if (uploadedAt != null) 'uploaded_at': uploadedAt,
       if (fetchedAt != null) 'fetched_at': fetchedAt,
     });
   }
@@ -469,14 +488,16 @@ class UguisuNicoliveUserIconCachesCompanion
   UguisuNicoliveUserIconCachesCompanion copyWith(
       {Value<int>? id,
       Value<int>? user,
-      Value<String>? iconContentType,
-      Value<String>? iconPath,
+      Value<String>? contentType,
+      Value<String>? path,
+      Value<DateTime?>? uploadedAt,
       Value<DateTime>? fetchedAt}) {
     return UguisuNicoliveUserIconCachesCompanion(
       id: id ?? this.id,
       user: user ?? this.user,
-      iconContentType: iconContentType ?? this.iconContentType,
-      iconPath: iconPath ?? this.iconPath,
+      contentType: contentType ?? this.contentType,
+      path: path ?? this.path,
+      uploadedAt: uploadedAt ?? this.uploadedAt,
       fetchedAt: fetchedAt ?? this.fetchedAt,
     );
   }
@@ -490,11 +511,14 @@ class UguisuNicoliveUserIconCachesCompanion
     if (user.present) {
       map['user'] = Variable<int>(user.value);
     }
-    if (iconContentType.present) {
-      map['icon_content_type'] = Variable<String>(iconContentType.value);
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
     }
-    if (iconPath.present) {
-      map['icon_path'] = Variable<String>(iconPath.value);
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (uploadedAt.present) {
+      map['uploaded_at'] = Variable<DateTime>(uploadedAt.value);
     }
     if (fetchedAt.present) {
       map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
@@ -507,8 +531,9 @@ class UguisuNicoliveUserIconCachesCompanion
     return (StringBuffer('UguisuNicoliveUserIconCachesCompanion(')
           ..write('id: $id, ')
           ..write('user: $user, ')
-          ..write('iconContentType: $iconContentType, ')
-          ..write('iconPath: $iconPath, ')
+          ..write('contentType: $contentType, ')
+          ..write('path: $path, ')
+          ..write('uploadedAt: $uploadedAt, ')
           ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
@@ -537,17 +562,22 @@ class $UguisuNicoliveUserIconCachesTable extends UguisuNicoliveUserIconCaches
       type: DriftSqlType.int,
       requiredDuringInsert: true,
       defaultConstraints: 'REFERENCES uguisu_nicolive_users (id)');
-  final VerificationMeta _iconContentTypeMeta =
-      const VerificationMeta('iconContentType');
+  final VerificationMeta _contentTypeMeta =
+      const VerificationMeta('contentType');
   @override
-  late final GeneratedColumn<String> iconContentType = GeneratedColumn<String>(
-      'icon_content_type', aliasedName, false,
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+      'content_type', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  final VerificationMeta _iconPathMeta = const VerificationMeta('iconPath');
+  final VerificationMeta _pathMeta = const VerificationMeta('path');
   @override
-  late final GeneratedColumn<String> iconPath = GeneratedColumn<String>(
-      'icon_path', aliasedName, false,
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+      'path', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  final VerificationMeta _uploadedAtMeta = const VerificationMeta('uploadedAt');
+  @override
+  late final GeneratedColumn<DateTime> uploadedAt = GeneratedColumn<DateTime>(
+      'uploaded_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   final VerificationMeta _fetchedAtMeta = const VerificationMeta('fetchedAt');
   @override
   late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
@@ -555,7 +585,7 @@ class $UguisuNicoliveUserIconCachesTable extends UguisuNicoliveUserIconCaches
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, user, iconContentType, iconPath, fetchedAt];
+      [id, user, contentType, path, uploadedAt, fetchedAt];
   @override
   String get aliasedName => _alias ?? 'uguisu_nicolive_user_icon_caches';
   @override
@@ -575,19 +605,25 @@ class $UguisuNicoliveUserIconCachesTable extends UguisuNicoliveUserIconCaches
     } else if (isInserting) {
       context.missing(_userMeta);
     }
-    if (data.containsKey('icon_content_type')) {
+    if (data.containsKey('content_type')) {
       context.handle(
-          _iconContentTypeMeta,
-          iconContentType.isAcceptableOrUnknown(
-              data['icon_content_type']!, _iconContentTypeMeta));
+          _contentTypeMeta,
+          contentType.isAcceptableOrUnknown(
+              data['content_type']!, _contentTypeMeta));
     } else if (isInserting) {
-      context.missing(_iconContentTypeMeta);
+      context.missing(_contentTypeMeta);
     }
-    if (data.containsKey('icon_path')) {
-      context.handle(_iconPathMeta,
-          iconPath.isAcceptableOrUnknown(data['icon_path']!, _iconPathMeta));
+    if (data.containsKey('path')) {
+      context.handle(
+          _pathMeta, path.isAcceptableOrUnknown(data['path']!, _pathMeta));
     } else if (isInserting) {
-      context.missing(_iconPathMeta);
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('uploaded_at')) {
+      context.handle(
+          _uploadedAtMeta,
+          uploadedAt.isAcceptableOrUnknown(
+              data['uploaded_at']!, _uploadedAtMeta));
     }
     if (data.containsKey('fetched_at')) {
       context.handle(_fetchedAtMeta,
@@ -613,10 +649,12 @@ class $UguisuNicoliveUserIconCachesTable extends UguisuNicoliveUserIconCaches
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       user: attachedDatabase.options.types
           .read(DriftSqlType.int, data['${effectivePrefix}user'])!,
-      iconContentType: attachedDatabase.options.types.read(
-          DriftSqlType.string, data['${effectivePrefix}icon_content_type'])!,
-      iconPath: attachedDatabase.options.types
-          .read(DriftSqlType.string, data['${effectivePrefix}icon_path'])!,
+      contentType: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}content_type'])!,
+      path: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}path'])!,
+      uploadedAt: attachedDatabase.options.types
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}uploaded_at']),
       fetchedAt: attachedDatabase.options.types
           .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
     );
