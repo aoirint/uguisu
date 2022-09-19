@@ -45,16 +45,6 @@ void main() async {
 
   sharedPreferences = await SharedPreferences.getInstance();
 
-  final windowOpacity = sharedPreferences!.getDouble('windowOpacity') ?? windowOpacityDefaultValue;
-  final alwaysOnTop = sharedPreferences!.getBool('alwaysOnTop') ?? alwaysOnTopDefaultValue;
-  final commentTimeFormatElapsed = sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue;
-
-  final initialConfig = Config(
-    windowOpacity: windowOpacity,
-    alwaysOnTop: alwaysOnTop,
-    commentTimeFormatElapsed: commentTimeFormatElapsed,
-  );
-
   if (isDesktopEnvironment()) {
     await windowManager.ensureInitialized();
 
@@ -70,19 +60,43 @@ void main() async {
       await windowManager.show();
       await windowManager.focus();
     });
-
-    windowManager.setOpacity(windowOpacity);
-    windowManager.setAlwaysOnTop(alwaysOnTop);
   }
 
   final initialLoginCookie = await loadLoginCookie(file: await getLoginCookiePath());
   await initSimpleClient(loginCookie: initialLoginCookie);
+
+  final initialConfig = await loadConfigFromSharedPreferences();
+  await applyAndSaveConfig(config: initialConfig);
 
   runApp(MyApp(initialLoginCookie: initialLoginCookie, initialConfig: initialConfig));
 }
 
 bool isDesktopEnvironment() {
   return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+}
+
+Future<Config> loadConfigFromSharedPreferences() async {
+  final windowOpacity = sharedPreferences!.getDouble('windowOpacity') ?? windowOpacityDefaultValue;
+  final alwaysOnTop = sharedPreferences!.getBool('alwaysOnTop') ?? alwaysOnTopDefaultValue;
+  final commentTimeFormatElapsed = sharedPreferences!.getBool('commentTimeFormatElapsed') ?? commentTimeFormatElapsedDefaultValue;
+
+  return Config(
+    windowOpacity: windowOpacity,
+    alwaysOnTop: alwaysOnTop,
+    commentTimeFormatElapsed: commentTimeFormatElapsed,
+  );
+}
+
+Future<void> applyAndSaveConfig({required Config config}) async {
+  sharedPreferences!.setDouble('windowOpacity', config.windowOpacity);
+  sharedPreferences!.setBool('alwaysOnTop', config.alwaysOnTop);
+
+  if (isDesktopEnvironment()) {
+    windowManager.setOpacity(config.windowOpacity);
+    windowManager.setAlwaysOnTop(config.alwaysOnTop);
+  }
+
+  sharedPreferences!.setBool('commentTimeFormatElapsed', config.commentTimeFormatElapsed);
 }
 
 Future<String?> getUserIconPath(int userId) async {
@@ -686,13 +700,7 @@ class ConfigWidget extends StatelessWidget {
       userPageUriResolver: SimpleNiconicoUserPageUriResolver(),
       config: configData.config,
       onChanged: ({required config}) async {
-        sharedPreferences!.setDouble('windowOpacity', config.windowOpacity);
-        windowManager.setOpacity(config.windowOpacity);
-
-        sharedPreferences!.setBool('alwaysOnTop', config.alwaysOnTop);
-        windowManager.setAlwaysOnTop(config.alwaysOnTop);
-
-        sharedPreferences!.setBool('commentTimeFormatElapsed', config.commentTimeFormatElapsed);
+        await applyAndSaveConfig(config: config);
 
         configData.setConfig(config: config);
       },
