@@ -13,7 +13,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:uguisu/api/niconico/niconico.dart';
-import 'package:uguisu/widgets/config/config_dialog.dart';
+import 'package:uguisu/widgets/config/config.dart';
 import 'package:uguisu/widgets/niconico/niconico.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:uguisu/niconico_live/niconico_live.dart';
