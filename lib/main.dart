@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:logging/logging.dart';
@@ -47,14 +46,6 @@ void main() async {
 
   sharedPreferences = await SharedPreferences.getInstance();
   uguisuDatabase = UguisuDatabase();
-  await uguisuDatabase!.into(uguisuDatabase!.uguisuNicolivePrograms).insert(
-    UguisuNicoliveProgramsCompanion.insert(
-      serviceId: 'nicolive',
-      programId: 'lv000000000',
-      title: 'My Title',
-      fetchedAt: DateTime.now(),
-    )
-  );
 
   if (isDesktopEnvironment()) {
     await windowManager.ensureInitialized();
@@ -235,55 +226,39 @@ Future<void> initSimpleClient({
     userIconSaveCache: saveUserIconCache,
     getUserPageUri: getUserPageUri,
     userPageLoadCacheOrNull: (userId) async {
-      final appSupportDir = await getApplicationSupportDirectory();
-      final userPageJsonFile = File(path.join(appSupportDir.path, 'cache/user_page/$userId.json'));
-      if (! await userPageJsonFile.exists()) {
-        mainLogger.warning('Cache-miss for user/$userId. User page json not exists');
+      final userPageCache = await (
+        uguisuDatabase!.select(uguisuDatabase!.uguisuNicoliveUsers)
+          ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.userId.equals(userId))
+      ).getSingleOrNull();
+
+      if (userPageCache == null) {
+        mainLogger.warning('Cache-miss for user/$userId');
         return null;
       }
-
-      final userPageRawJson = await userPageJsonFile.readAsString(encoding: utf8);
-      final userPageJson = jsonDecode(userPageRawJson);
-
-      if (userPageJson['version'] != '1') {
-        mainLogger.warning('Unsupported user page json version. Ignore this: ${userPageJsonFile.path}');
-        return null;
-      }
-
-      final userIdInJson = userPageJson['userId'];
-      if (userIdInJson != userId) {
-        throw Exception('Invalid user page json. userId does not match. given: $userId, json: $userIdInJson');
-      }
-
-      final nickname = userPageJson['nickname'];
-      final iconUrl = userPageJson['iconUrl'];
-      final pageFetchedAt = DateTime.parse(userPageJson['pageFetchedAt']);
 
       return NiconicoUserPageCache(
         userId: userId,
         userPage: NiconicoUserPage(
           id: userId,
-          nickname: nickname,
-          iconUrl: iconUrl,
+          nickname: userPageCache.nickname,
+          iconUrl: userPageCache.iconUrl,
         ),
-        pageFetchedAt: pageFetchedAt,
+        pageFetchedAt: userPageCache.fetchedAt,
       );
     },
     userPageSaveCache: (userPage) async {
       final userId = userPage.userId;
 
-      final appSupportDir = await getApplicationSupportDirectory();
-      final userPageJsonFile = File(path.join(appSupportDir.path, 'cache/user_page/$userId.json'));
-      await userPageJsonFile.parent.create(recursive: true);
-      final userPageRawJson = jsonEncode({
-        'version': '1',
-        'userId': userId,
-        'nickname': userPage.userPage.nickname,
-        'iconUrl': userPage.userPage.iconUrl,
-        'pageFetchedAt': userPage.pageFetchedAt.toIso8601String(),
-      });
-
-      await userPageJsonFile.writeAsString(userPageRawJson, encoding: utf8, flush: true);
+      await uguisuDatabase!.into(uguisuDatabase!.uguisuNicoliveUsers).insert(
+        UguisuNicoliveUsersCompanion.insert(
+          serviceId: 'nicolive',
+          userId: userId,
+          nickname: userPage.userPage.nickname,
+          iconUrl: userPage.userPage.iconUrl,
+          fetchedAt: userPage.pageFetchedAt,
+        ),
+        mode: InsertMode.insertOrReplace,
+      );
     },
   );
 }
