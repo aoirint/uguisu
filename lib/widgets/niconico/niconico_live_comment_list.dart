@@ -80,7 +80,7 @@ class _NiconicoLiveCommentListState extends State<NiconicoLiveCommentList> {
                       await OpenFilex.open(iconPath.path);
                     },
                     child: Tooltip(
-                      message: 'アイコンの画像ファイルを開く',
+                      message: 'アイコンの画像ファイル（キャッシュ）を開く',
                       child: Image.memory(iconBytes),
                     ),
                   ),
