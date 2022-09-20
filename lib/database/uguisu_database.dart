@@ -11,9 +11,10 @@ class UguisuNicoliveUsers extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get serviceId => text()(); // to distinguish nicolive compatible services (e.g. mock server)
   IntColumn get userId => integer()();
+  BoolColumn get anonymity => boolean()();
 
-  TextColumn get nickname => text()();
-  TextColumn get iconUrl => text()();
+  TextColumn get nickname => text().nullable()();
+  TextColumn get iconUrl => text().nullable()();
   DateTimeColumn get fetchedAt => dateTime()();
 
   @override
@@ -80,6 +81,36 @@ class UguisuNicolivePrograms extends Table {
   List<Set<Column<Object>>>? get uniqueKeys => [{serviceId, programId}];
 }
 
+class UguisuNicoliveRooms extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get program => integer().references(UguisuNicolivePrograms, #id)();
+
+  TextColumn get thread => text()();
+  TextColumn get name => text()();
+
+  @override
+  List<Set<Column<Object>>>? get uniqueKeys => [{program, thread}];
+}
+
+class UguisuNicoliveComments extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get room => integer().references(UguisuNicoliveRooms, #id)();
+  IntColumn get user => integer().references(UguisuNicoliveUsers, #id)();
+  IntColumn get no => integer()();
+
+  TextColumn get content => text()();
+  IntColumn get anonymity => integer().nullable()();
+  IntColumn get premium => integer().nullable()();
+  TextColumn get mail => text().nullable()();
+  DateTimeColumn get postedAt => dateTime()();
+  IntColumn get vpos => integer()();
+
+  DateTimeColumn get fetchedAt => dateTime()();
+
+  @override
+  List<Set<Column<Object>>>? get uniqueKeys => [{room, no}];
+}
+
 @DriftDatabase(
   tables: [
     UguisuNicoliveUsers,
@@ -87,6 +118,7 @@ class UguisuNicolivePrograms extends Table {
     UguisuNicoliveCommunities,
     UguisuNicoliveCommunityIconCaches,
     UguisuNicolivePrograms,
+    UguisuNicoliveComments,
   ],
 )
 class UguisuDatabase extends _$UguisuDatabase {
