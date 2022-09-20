@@ -395,12 +395,12 @@ class NiconicoLiveSimpleClient {
         final giftArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(giftRawMessage)[0];
 
         final giftId = giftArgs[0];
-        final userId = int.parse(giftArgs[1]) if giftArgs[1] != 'NULL' else null;
+        final userId = giftArgs[1] != 'NULL' ? int.parse(giftArgs[1]) : null;
         final userName = giftArgs[2];
         final giftPoint = giftArgs[3];
         final unknownArg1 = giftArgs[4];
         final giftName = giftArgs[5];
-        final unknownArg2 = giftArgs[6] if giftArgs.length > 6 else null;
+        final unknownArg2 = giftArgs.length > 6 ? giftArgs[6] : null;
 
         return GiftChatMessage(
           chatMessage: chatMessage,
