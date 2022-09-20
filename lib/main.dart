@@ -1039,7 +1039,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   final chatMessageListScrollController = ScrollController();
 
   final chatMessageAddPool = Pool(1);
-  final chatMessageLazyResolverPool = Pool(1);
 
   Logger? logger;
 
@@ -1093,7 +1092,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   Future<void> addAllChatMessagesIfNotExists({
     required Iterable<BaseChatMessage> chatMessages,
   }) async {
-    final nextChatMessages = [...this.chatMessages];
+    var nextChatMessages = [...this.chatMessages];
 
     for (final chatMessage in chatMessages) {
       final found = this.chatMessages.any((other) =>
@@ -1108,9 +1107,13 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     // ListViewの個数が変わる前にatBottomを検査
     final isScrollEnd = chatMessageListScrollController.hasClients && chatMessageListScrollController.position.atEdge && chatMessageListScrollController.position.pixels != 0;
 
-    setState(() {
-      nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+    nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
 
+    mainLogger.fine('addAllChatMessagesIfNotExists: Start resolving lazy messages');
+    nextChatMessages = await resolveAllLazyChatMessages(nextChatMessages, true);
+    mainLogger.fine('addAllChatMessagesIfNotExists: Resolved all lazy messages');
+
+    setState(() {
       this.chatMessages = nextChatMessages;
     });
 
@@ -1119,17 +1122,6 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       if (isScrollEnd) {
         chatMessageListScrollController.jumpTo(chatMessageListScrollController.position.maxScrollExtent);
       }
-    });
-
-    await Future(() async {
-      await chatMessageLazyResolverPool.withResource(() async {
-        mainLogger.info('chatMessageLazyResolverPool: Start resolving lazy messages');
-        final nextChatMessages = await resolveAllLazyChatMessages(this.chatMessages, true);
-        mainLogger.info('chatMessageLazyResolverPool: Update resolved messages');
-        setState(() {
-          this.chatMessages = nextChatMessages;
-        });
-      });
     });
 
     final rooms = <NiconicoLiveRoom>[];
