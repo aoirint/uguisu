@@ -232,7 +232,7 @@ class NiconicoLiveSimpleClient {
     );
   }
 
-  Future<void> connect({
+  Future<void> fetchLivePage({
     required String livePageUrl, // https://live.nicovideo.jp/watch/lv000000000
     required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
@@ -256,10 +256,16 @@ class NiconicoLiveSimpleClient {
     if (livePage.webSocketUrl == '') {
       throw NoWatchWebSocketUrlFoundException('No watch web socket url found. Maybe you have no access to the requested program.');
     }
+  }
+
+  Future<void> connect() async {
+    if (livePage == null) {
+      throw Exception('Live page must be set before connect');
+    }
 
     NiconicoLiveWatchClient watchClient = NiconicoLiveWatchClient();
-    watchClient.connect(
-      websocketUrl: livePage.webSocketUrl,
+    await watchClient.connect(
+      websocketUrl: livePage!.webSocketUrl,
       userAgent: userAgent,
       onRoomMessage: __onRoomMessage,
       onScheduleMessage: __onScheduleMessage,

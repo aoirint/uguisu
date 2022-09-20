@@ -8,6 +8,7 @@ import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sweet_cookie_jar/sweet_cookie_jar.dart';
+import 'package:pool/pool.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:collection/collection.dart';
@@ -1037,6 +1038,9 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   final liveIdOrUrlTextController = TextEditingController(text: '');
   final chatMessageListScrollController = ScrollController();
 
+  final chatMessageAddPool = Pool(1);
+  final chatMessageLazyResolverPool = Pool(1);
+
   Logger? logger;
 
   @override
@@ -1047,10 +1051,49 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     this.logger = logger;
   }
 
+  Future<List<BaseChatMessage>> resolveAllLazyChatMessages(List<BaseChatMessage> chatMessages, bool disconnect) async {
+    final localResolverPool = Pool(5);
+    final nextChatMessages = [...chatMessages];
+
+    for (var i=0; i<nextChatMessages.length; i+=1) {
+      final chatMessageIndex = i;
+      // logger?.fine('resolveLazyChatMessages: schedule resolving comment no. ${nextChatMessages[chatMessageIndex].chatMessage.no} (${chatMessageIndex+1}/${nextChatMessages.length})');
+
+      localResolverPool.withResource(() async {
+        var cm = nextChatMessages[chatMessageIndex];
+        // logger?.fine('resolveLazyChatMessages: resolving comment no. ${cm.chatMessage.no}');
+
+        if (cm is LazyNormalChatMessage) {
+          logger?.fine('resolveLazyChatMessages: no. ${cm.chatMessage.no} is LazyNormalChatMessage');
+          cm = await cm.resolve();
+        }
+
+        if (cm is DisconnectChatMessage) {
+          logger?.fine('resolveLazyChatMessages: no. ${cm.chatMessage.no} is DisconnectChatMessage');
+          if (disconnect) {
+            logger?.info('Close websocket connection due to the disconnect chat message (No. ${cm.chatMessage.no})');
+            simpleClient?.disconnect();
+          } else {
+            logger?.fine('resolveLazyChatMessages: Disconnect message no. ${cm.chatMessage.no} is ignored');
+          }
+        }
+
+        // logger?.fine('resolveLazyChatMessages: resolved no. ${cm.chatMessage.no}');
+        nextChatMessages[chatMessageIndex] = cm;
+      });
+    }
+
+    logger?.fine('resolveLazyChatMessages: wait until resolver poll consuming done');
+    await localResolverPool.close();
+    logger?.fine('resolveLazyChatMessages: resolver poll consuming done');
+
+    return nextChatMessages;
+  }
+
   Future<void> addAllChatMessagesIfNotExists({
     required Iterable<BaseChatMessage> chatMessages,
   }) async {
-    final nextChatMessages = this.chatMessages;
+    final nextChatMessages = [...this.chatMessages];
 
     for (final chatMessage in chatMessages) {
       final found = this.chatMessages.any((other) =>
@@ -1062,12 +1105,12 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       nextChatMessages.add(chatMessage);
     }
 
-    nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
-
     // ListViewの個数が変わる前にatBottomを検査
     final isScrollEnd = chatMessageListScrollController.hasClients && chatMessageListScrollController.position.atEdge && chatMessageListScrollController.position.pixels != 0;
 
     setState(() {
+      nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+
       this.chatMessages = nextChatMessages;
     });
 
@@ -1076,6 +1119,17 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       if (isScrollEnd) {
         chatMessageListScrollController.jumpTo(chatMessageListScrollController.position.maxScrollExtent);
       }
+    });
+
+    Future(() async {
+      await chatMessageLazyResolverPool.withResource(() async {
+        mainLogger.info('chatMessageLazyResolverPool: Start resolving lazy messages');
+        final nextChatMessages = await resolveAllLazyChatMessages(this.chatMessages, true);
+        mainLogger.info('chatMessageLazyResolverPool: Update resolved messages');
+        setState(() {
+          this.chatMessages = nextChatMessages;
+        });
+      });
     });
 
     final rooms = <NiconicoLiveRoom>[];
@@ -1126,7 +1180,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           loginCookie: loginCookie,
         );
 
-        await simpleClient!.connect(
+        await simpleClient!.fetchLivePage(
           livePageUrl: livePageUrl,
           onScheduleMessage: (scheduleMessage) {
             setState(() {
@@ -1141,21 +1195,10 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
             logger?.info('Statistics | viewers=${statisticsMessage.viewers}, comments=${statisticsMessage.comments}, adPoints=${statisticsMessage.adPoints}, giftPoints=${statisticsMessage.giftPoints}');
           },
           onChatMessage: (chatMessage) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Future(() async {
-                var cm = chatMessage;
+            logger?.fine('onChatMessage: no. ${chatMessage.chatMessage.no}');
 
-                if (cm is LazyNormalChatMessage) {
-                  cm = await cm.resolve();
-                }
-
-                if (cm is DisconnectChatMessage) {
-                  logger?.info('Close websocket connection due to the disconnect chat message (No. ${cm.chatMessage.no})');
-                  simpleClient?.disconnect();
-                }
-
-                await addChatMessageIfNotExists(chatMessage: cm);
-              });
+            chatMessageAddPool.withResource(() async {
+              addChatMessageIfNotExists(chatMessage: chatMessage);
             });
           },
           onRFrameClosed: (rvalue) {
@@ -1186,6 +1229,12 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           this.livePageSupplierUserPageCache = livePageSupplierUserPageCache;
           this.livePageSupplierUserIconCache = livePageSupplierUserIconCache;
           this.livePageSupplierCommunityIconCache = livePageSupplierCommunityIconCache;
+        });
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Future(() async {
+            await simpleClient!.connect();
+          });
         });
 
         // Load cached live comments for reconnecting
@@ -1402,16 +1451,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                           pvalue: pvalue,
                         );
 
-                        // TODO: commonize parse and resolve chat message
-                        for (final chatMessage in thread.chatMessages) {
-                          var cm = simpleClient!.parseChatMessage(chatMessage);
-
-                          if (cm is LazyNormalChatMessage) {
-                            cm = await cm.resolve();
-                          }
-
-                          newChatMessages.add(cm);
-                        }
+                        // FIXME: simpleClient can be disconnect here when disconnect message received?
+                        newChatMessages.addAll(thread.chatMessages.map((chatMessage) => simpleClient!.parseChatMessage(chatMessage)).toList());
 
                         if (newChatMessages.isEmpty) {
                           logger?.info('No new chat message, break');
