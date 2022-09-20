@@ -1121,7 +1121,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       }
     });
 
-    Future(() async {
+    await Future(() async {
       await chatMessageLazyResolverPool.withResource(() async {
         mainLogger.info('chatMessageLazyResolverPool: Start resolving lazy messages');
         final nextChatMessages = await resolveAllLazyChatMessages(this.chatMessages, true);
