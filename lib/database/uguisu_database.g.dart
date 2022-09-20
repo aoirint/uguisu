@@ -11,7 +11,7 @@ class UguisuNicoliveUser extends DataClass
     implements Insertable<UguisuNicoliveUser> {
   final int id;
   final String serviceId;
-  final int userId;
+  final String userId;
   final bool anonymity;
   final String? nickname;
   final String? iconUrl;
@@ -29,7 +29,7 @@ class UguisuNicoliveUser extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['service_id'] = Variable<String>(serviceId);
-    map['user_id'] = Variable<int>(userId);
+    map['user_id'] = Variable<String>(userId);
     map['anonymity'] = Variable<bool>(anonymity);
     if (!nullToAbsent || nickname != null) {
       map['nickname'] = Variable<String>(nickname);
@@ -63,7 +63,7 @@ class UguisuNicoliveUser extends DataClass
     return UguisuNicoliveUser(
       id: serializer.fromJson<int>(json['id']),
       serviceId: serializer.fromJson<String>(json['serviceId']),
-      userId: serializer.fromJson<int>(json['userId']),
+      userId: serializer.fromJson<String>(json['userId']),
       anonymity: serializer.fromJson<bool>(json['anonymity']),
       nickname: serializer.fromJson<String?>(json['nickname']),
       iconUrl: serializer.fromJson<String?>(json['iconUrl']),
@@ -76,7 +76,7 @@ class UguisuNicoliveUser extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'serviceId': serializer.toJson<String>(serviceId),
-      'userId': serializer.toJson<int>(userId),
+      'userId': serializer.toJson<String>(userId),
       'anonymity': serializer.toJson<bool>(anonymity),
       'nickname': serializer.toJson<String?>(nickname),
       'iconUrl': serializer.toJson<String?>(iconUrl),
@@ -87,7 +87,7 @@ class UguisuNicoliveUser extends DataClass
   UguisuNicoliveUser copyWith(
           {int? id,
           String? serviceId,
-          int? userId,
+          String? userId,
           bool? anonymity,
           Value<String?> nickname = const Value.absent(),
           Value<String?> iconUrl = const Value.absent(),
@@ -134,7 +134,7 @@ class UguisuNicoliveUser extends DataClass
 class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
   final Value<int> id;
   final Value<String> serviceId;
-  final Value<int> userId;
+  final Value<String> userId;
   final Value<bool> anonymity;
   final Value<String?> nickname;
   final Value<String?> iconUrl;
@@ -151,7 +151,7 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
   UguisuNicoliveUsersCompanion.insert({
     this.id = const Value.absent(),
     required String serviceId,
-    required int userId,
+    required String userId,
     required bool anonymity,
     this.nickname = const Value.absent(),
     this.iconUrl = const Value.absent(),
@@ -163,7 +163,7 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
   static Insertable<UguisuNicoliveUser> custom({
     Expression<int>? id,
     Expression<String>? serviceId,
-    Expression<int>? userId,
+    Expression<String>? userId,
     Expression<bool>? anonymity,
     Expression<String>? nickname,
     Expression<String>? iconUrl,
@@ -183,7 +183,7 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
   UguisuNicoliveUsersCompanion copyWith(
       {Value<int>? id,
       Value<String>? serviceId,
-      Value<int>? userId,
+      Value<String>? userId,
       Value<bool>? anonymity,
       Value<String?>? nickname,
       Value<String?>? iconUrl,
@@ -209,7 +209,7 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
       map['service_id'] = Variable<String>(serviceId.value);
     }
     if (userId.present) {
-      map['user_id'] = Variable<int>(userId.value);
+      map['user_id'] = Variable<String>(userId.value);
     }
     if (anonymity.present) {
       map['anonymity'] = Variable<bool>(anonymity.value);
@@ -261,9 +261,9 @@ class $UguisuNicoliveUsersTable extends UguisuNicoliveUsers
       type: DriftSqlType.string, requiredDuringInsert: true);
   final VerificationMeta _userIdMeta = const VerificationMeta('userId');
   @override
-  late final GeneratedColumn<int> userId = GeneratedColumn<int>(
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
       'user_id', aliasedName, false,
-      type: DriftSqlType.int, requiredDuringInsert: true);
+      type: DriftSqlType.string, requiredDuringInsert: true);
   final VerificationMeta _anonymityMeta = const VerificationMeta('anonymity');
   @override
   late final GeneratedColumn<bool> anonymity = GeneratedColumn<bool>(
@@ -351,7 +351,7 @@ class $UguisuNicoliveUsersTable extends UguisuNicoliveUsers
       serviceId: attachedDatabase.options.types
           .read(DriftSqlType.string, data['${effectivePrefix}service_id'])!,
       userId: attachedDatabase.options.types
-          .read(DriftSqlType.int, data['${effectivePrefix}user_id'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}user_id'])!,
       anonymity: attachedDatabase.options.types
           .read(DriftSqlType.bool, data['${effectivePrefix}anonymity'])!,
       nickname: attachedDatabase.options.types
@@ -1950,11 +1950,13 @@ class UguisuNicoliveRoom extends DataClass
   final int program;
   final String thread;
   final String name;
+  final DateTime fetchedAt;
   const UguisuNicoliveRoom(
       {required this.id,
       required this.program,
       required this.thread,
-      required this.name});
+      required this.name,
+      required this.fetchedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1962,6 +1964,7 @@ class UguisuNicoliveRoom extends DataClass
     map['program'] = Variable<int>(program);
     map['thread'] = Variable<String>(thread);
     map['name'] = Variable<String>(name);
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
     return map;
   }
 
@@ -1971,6 +1974,7 @@ class UguisuNicoliveRoom extends DataClass
       program: Value(program),
       thread: Value(thread),
       name: Value(name),
+      fetchedAt: Value(fetchedAt),
     );
   }
 
@@ -1982,6 +1986,7 @@ class UguisuNicoliveRoom extends DataClass
       program: serializer.fromJson<int>(json['program']),
       thread: serializer.fromJson<String>(json['thread']),
       name: serializer.fromJson<String>(json['name']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
     );
   }
   @override
@@ -1992,16 +1997,22 @@ class UguisuNicoliveRoom extends DataClass
       'program': serializer.toJson<int>(program),
       'thread': serializer.toJson<String>(thread),
       'name': serializer.toJson<String>(name),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
     };
   }
 
   UguisuNicoliveRoom copyWith(
-          {int? id, int? program, String? thread, String? name}) =>
+          {int? id,
+          int? program,
+          String? thread,
+          String? name,
+          DateTime? fetchedAt}) =>
       UguisuNicoliveRoom(
         id: id ?? this.id,
         program: program ?? this.program,
         thread: thread ?? this.thread,
         name: name ?? this.name,
+        fetchedAt: fetchedAt ?? this.fetchedAt,
       );
   @override
   String toString() {
@@ -2009,13 +2020,14 @@ class UguisuNicoliveRoom extends DataClass
           ..write('id: $id, ')
           ..write('program: $program, ')
           ..write('thread: $thread, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, program, thread, name);
+  int get hashCode => Object.hash(id, program, thread, name, fetchedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2023,7 +2035,8 @@ class UguisuNicoliveRoom extends DataClass
           other.id == this.id &&
           other.program == this.program &&
           other.thread == this.thread &&
-          other.name == this.name);
+          other.name == this.name &&
+          other.fetchedAt == this.fetchedAt);
 }
 
 class UguisuNicoliveRoomsCompanion extends UpdateCompanion<UguisuNicoliveRoom> {
@@ -2031,31 +2044,37 @@ class UguisuNicoliveRoomsCompanion extends UpdateCompanion<UguisuNicoliveRoom> {
   final Value<int> program;
   final Value<String> thread;
   final Value<String> name;
+  final Value<DateTime> fetchedAt;
   const UguisuNicoliveRoomsCompanion({
     this.id = const Value.absent(),
     this.program = const Value.absent(),
     this.thread = const Value.absent(),
     this.name = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
   });
   UguisuNicoliveRoomsCompanion.insert({
     this.id = const Value.absent(),
     required int program,
     required String thread,
     required String name,
+    required DateTime fetchedAt,
   })  : program = Value(program),
         thread = Value(thread),
-        name = Value(name);
+        name = Value(name),
+        fetchedAt = Value(fetchedAt);
   static Insertable<UguisuNicoliveRoom> custom({
     Expression<int>? id,
     Expression<int>? program,
     Expression<String>? thread,
     Expression<String>? name,
+    Expression<DateTime>? fetchedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (program != null) 'program': program,
       if (thread != null) 'thread': thread,
       if (name != null) 'name': name,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
     });
   }
 
@@ -2063,12 +2082,14 @@ class UguisuNicoliveRoomsCompanion extends UpdateCompanion<UguisuNicoliveRoom> {
       {Value<int>? id,
       Value<int>? program,
       Value<String>? thread,
-      Value<String>? name}) {
+      Value<String>? name,
+      Value<DateTime>? fetchedAt}) {
     return UguisuNicoliveRoomsCompanion(
       id: id ?? this.id,
       program: program ?? this.program,
       thread: thread ?? this.thread,
       name: name ?? this.name,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
     );
   }
 
@@ -2087,6 +2108,9 @@ class UguisuNicoliveRoomsCompanion extends UpdateCompanion<UguisuNicoliveRoom> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
     return map;
   }
 
@@ -2096,7 +2120,8 @@ class UguisuNicoliveRoomsCompanion extends UpdateCompanion<UguisuNicoliveRoom> {
           ..write('id: $id, ')
           ..write('program: $program, ')
           ..write('thread: $thread, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('fetchedAt: $fetchedAt')
           ..write(')'))
         .toString();
   }
@@ -2132,8 +2157,13 @@ class $UguisuNicoliveRoomsTable extends UguisuNicoliveRooms
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  final VerificationMeta _fetchedAtMeta = const VerificationMeta('fetchedAt');
   @override
-  List<GeneratedColumn> get $columns => [id, program, thread, name];
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+      'fetched_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, program, thread, name, fetchedAt];
   @override
   String get aliasedName => _alias ?? 'uguisu_nicolive_rooms';
   @override
@@ -2164,6 +2194,12 @@ class $UguisuNicoliveRoomsTable extends UguisuNicoliveRooms
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('fetched_at')) {
+      context.handle(_fetchedAtMeta,
+          fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta));
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
     return context;
   }
 
@@ -2185,6 +2221,8 @@ class $UguisuNicoliveRoomsTable extends UguisuNicoliveRooms
           .read(DriftSqlType.string, data['${effectivePrefix}thread'])!,
       name: attachedDatabase.options.types
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      fetchedAt: attachedDatabase.options.types
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
     );
   }
 

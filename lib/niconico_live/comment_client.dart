@@ -21,6 +21,7 @@ class ChatMessage {
   String? mail;
   String userId;
   int vpos;
+  DateTime fetchedAt;
 
   ChatMessage({
     this.anonymity,
@@ -33,6 +34,7 @@ class ChatMessage {
     this.mail,
     required this.userId,
     required this.vpos,
+    required this.fetchedAt,
   });
 }
 
@@ -200,6 +202,7 @@ class NiconicoLiveCommentClient {
         mail: chat['mail'],
         userId: chat['user_id'],
         vpos: chat['vpos'],
+        fetchedAt: DateTime.now().toUtc(),
       ));
     }
   }

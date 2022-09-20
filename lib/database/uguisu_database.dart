@@ -10,7 +10,7 @@ part 'uguisu_database.g.dart';
 class UguisuNicoliveUsers extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get serviceId => text()(); // to distinguish nicolive compatible services (e.g. mock server)
-  IntColumn get userId => integer()();
+  TextColumn get userId => text()();
   BoolColumn get anonymity => boolean()();
 
   TextColumn get nickname => text().nullable()();
@@ -87,6 +87,8 @@ class UguisuNicoliveRooms extends Table {
 
   TextColumn get thread => text()();
   TextColumn get name => text()();
+
+  DateTimeColumn get fetchedAt => dateTime()();
 
   @override
   List<Set<Column<Object>>>? get uniqueKeys => [{program, thread}];

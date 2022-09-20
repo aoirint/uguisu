@@ -14,10 +14,12 @@ import 'user_icon_cache_client.dart';
 class Room {
   RoomMessage roomMessage;
   NiconicoLiveCommentClient commentClient;
+  DateTime fetchedAt;
 
   Room({
     required this.roomMessage,
     required this.commentClient,
+    required this.fetchedAt,
   });
 }
 
@@ -112,21 +114,21 @@ class NicoadChatMessage extends BaseChatMessage {
 
 class GiftChatMessage extends BaseChatMessage {
   String giftId;
-  String userId;
+  int? userId;
   String userName;
   String giftPoint;
   String unknownArg1;
   String giftName;
-  String unknownArg2;
+  String? unknownArg2;
   GiftChatMessage({
     required chatMessage,
     required this.giftId,
-    required this.userId,
+    this.userId,
     required this.userName,
     required this.giftPoint,
     required this.unknownArg1,
     required this.giftName,
-    required this.unknownArg2,
+    this.unknownArg2,
   }) : super(
     chatMessage: chatMessage,
   );
@@ -287,6 +289,7 @@ class NiconicoLiveSimpleClient {
     final commentServerWebSocketUrl = roomMessage.messageServer.uri;
     final thread = roomMessage.threadId;
     final threadkey = roomMessage.yourPostKey;
+    final fetchedAt = DateTime.now().toUtc();
 
     final commentClient = NiconicoLiveCommentClient();
     commentClient.connect(
@@ -299,7 +302,7 @@ class NiconicoLiveSimpleClient {
       onRFrameClosed: onRFrameClosed,
     );
 
-    rooms.add(Room(roomMessage: roomMessage, commentClient: commentClient));
+    rooms.add(Room(roomMessage: roomMessage, commentClient: commentClient, fetchedAt: fetchedAt));
   }
 
   BaseChatMessage parseChatMessage(ChatMessage chatMessage) {
@@ -326,7 +329,7 @@ class NiconicoLiveSimpleClient {
         if (userIconCacheClient == null) { throw Exception('userIconCacheClient != null'); }
 
         final userPageCache = await userPageCacheClient!.loadOrFetchUserPage(userId: userIdInt, userPageUri: userPageUri);
-        final userIconCache = await userIconCacheClient!.loadOrFetchIcon(userId: userIdInt, iconUri: Uri.parse(userPageCache.userPage.iconUrl));
+        final userIconCache = await userIconCacheClient!.loadOrFetchIcon(userId: userIdInt, iconUri: Uri.parse(userPageCache.userPage.iconUrl!));
 
         return CommentUser(userId: userIdInt, userPageCache: userPageCache, userIconCache: userIconCache);
       },);
@@ -385,17 +388,19 @@ class NiconicoLiveSimpleClient {
 
       if (comment.startsWith('/gift')) {
         // ギフト
-        // /gift ギフトID ユーザーID \"ユーザー名\" ギフトポイント \"\" \"ギフト名\" 匿名フラグ？
+        // 匿名ギフト(6列):  /gift gourmet_zundamoti NULL \"名無し\" 300 \"\" \"ずんだ餅\"
+        // 非匿名ギフト(7列): /gift gourmet_kiritanpo 100 "DUMMY_USER" 600 "" "きりたんぽ" 1
+        //                   /gift ギフトID ユーザーID \"ユーザー名\" ギフトポイント \"\" \"ギフト名\" 1
         final giftRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
         final giftArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(giftRawMessage)[0];
 
         final giftId = giftArgs[0];
-        final userId = giftArgs[1];
+        final userId = int.parse(giftArgs[1]) if giftArgs[1] != 'NULL' else null;
         final userName = giftArgs[2];
         final giftPoint = giftArgs[3];
         final unknownArg1 = giftArgs[4];
         final giftName = giftArgs[5];
-        final unknownArg2 = giftArgs[6];
+        final unknownArg2 = giftArgs[6] if giftArgs.length > 6 else null;
 
         return GiftChatMessage(
           chatMessage: chatMessage,

@@ -118,7 +118,7 @@ Future<String?> getUserIconPath(int userId) async {
         uguisuNicoliveUserIconCaches.user.equalsExp(uguisuNicoliveUsers.id),
       ),
     ])
-      ..where(uguisuNicoliveUsers.serviceId.equals('nicolive') & uguisuNicoliveUsers.userId.equals(userId))
+      ..where(uguisuNicoliveUsers.serviceId.equals('nicolive') & uguisuNicoliveUsers.userId.equals(userId.toString()))
   ).getSingleOrNull();
 
   if (joinedResult == null) {
@@ -141,7 +141,7 @@ Future<NiconicoUserIconCache?> loadUserIconCache(int userId) async {
         uguisuNicoliveUserIconCaches.user.equalsExp(uguisuNicoliveUsers.id),
       ),
     ])
-      ..where(uguisuNicoliveUsers.serviceId.equals('nicolive') & uguisuNicoliveUsers.userId.equals(userId))
+      ..where(uguisuNicoliveUsers.serviceId.equals('nicolive') & uguisuNicoliveUsers.userId.equals(userId.toString()))
   ).getSingleOrNull();
 
   if (joinedResult == null) {
@@ -165,7 +165,7 @@ Future<NiconicoUserIconCache?> loadUserIconCache(int userId) async {
   return NiconicoUserIconCache(
     userId: userId,
     userIcon: NiconicoUserIcon(
-      iconUri: Uri.parse(user.iconUrl),
+      iconUri: Uri.parse(user.iconUrl!),
       contentType: userIconCache.contentType,
       iconBytes: iconBytes,
     ),
@@ -194,7 +194,7 @@ Future<void> saveUserIconCache(NiconicoUserIconCache userIcon) async {
   await iconFile.parent.create(recursive: true);
   await iconFile.writeAsBytes(userIcon.userIcon.iconBytes, flush: true);
 
-  final userPageCache = await (uguisuDatabase!.select(uguisuNicoliveUsers)..where((tbl) => tbl.userId.equals(userId))).getSingleOrNull();
+  final userPageCache = await (uguisuDatabase!.select(uguisuNicoliveUsers)..where((tbl) => tbl.userId.equals(userId.toString()))).getSingleOrNull();
   if (userPageCache == null) {
     throw Exception('User page cache not found for user/$userId');
   }
@@ -367,7 +367,7 @@ Future<void> initSimpleClient({
     userPageLoadCacheOrNull: (userId) async {
       final userPageCache = await (
         uguisuDatabase!.select(uguisuDatabase!.uguisuNicoliveUsers)
-          ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.userId.equals(userId))
+          ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.userId.equals(userId.toString()))
       ).getSingleOrNull();
 
       if (userPageCache == null) {
@@ -379,6 +379,7 @@ Future<void> initSimpleClient({
         userId: userId,
         userPage: NiconicoUserPage(
           id: userId,
+          anonymity: false,
           nickname: userPageCache.nickname,
           iconUrl: userPageCache.iconUrl,
         ),
@@ -392,9 +393,10 @@ Future<void> initSimpleClient({
       await uguisuDatabase!.into(uguisuNicoliveUsers).insert(
         UguisuNicoliveUsersCompanion.insert(
           serviceId: 'nicolive',
-          userId: userId,
-          nickname: userPage.userPage.nickname,
-          iconUrl: userPage.userPage.iconUrl,
+          userId: userId.toString(),
+          anonymity: false,
+          nickname: Value(userPage.userPage.nickname),
+          iconUrl: Value(userPage.userPage.iconUrl),
           fetchedAt: userPage.pageFetchedAt,
         ),
         onConflict: DoUpdate.withExcluded(
@@ -497,7 +499,7 @@ Future<NiconicoLivePage?> loadLivePage({
       providerType: livePageCache.providerType,
       visualProviderType: livePageCache.visualProviderType,
       supplier: NiconicoLivePageProgramSupplier(
-        name: supplierUser.nickname,
+        name: supplierUser.nickname!,
         programProviderId: supplierUser.userId.toString(),
       ),
       beginTime: (livePageCache.beginTime.millisecondsSinceEpoch / 1000).floor(), // in seconds
@@ -523,7 +525,7 @@ Future<void> saveLivePage({
   await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: userId, userPageUri: userPageUri);
 
   final userPageCache =  await (uguisuDatabase!.select(uguisuDatabase!.uguisuNicoliveUsers)
-    ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.userId.equals(userId))
+    ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.userId.equals(userId.toString()))
   ).getSingle();
 
   final communityId = livePage.socialGroup.id;
@@ -570,130 +572,201 @@ Future<void> saveLivePage({
 class NiconicoLiveRoom {
   final String name;
   final String thread;
+  final DateTime fetchedAt;
   final chatMessages = <ChatMessage>[];
 
   NiconicoLiveRoom({
     required this.name,
     required this.thread,
+    required this.fetchedAt,
   });
 }
 
 class NiconicoLiveComment {
   final String communityId;
-  final String liveId;
+  final String programId;
   final List<NiconicoLiveRoom> rooms;
 
   NiconicoLiveComment({
     required this.communityId,
-    required this.liveId,
+    required this.programId,
     required this.rooms,
   });
 }
 
-Future<File> getLiveCommentCachePath({
-  required String communityId,
-  required String liveId,
-}) async {
-  final appSupportDir = await getApplicationSupportDirectory();
-  return File(path.join(appSupportDir.path, 'cache', 'live_comment', communityId, '$liveId.json'));
-}
-
 Future<NiconicoLiveComment?> loadLiveComment({
-  required File file,
+  required String programId,
 }) async {
-  if (! file.existsSync()) {
-    return null;
-  }
+  final uguisuNicolivePrograms = uguisuDatabase!.uguisuNicolivePrograms;
+  final uguisuNicoliveCommunities = uguisuDatabase!.uguisuNicoliveCommunities;
+  final uguisuNicoliveUsers = uguisuDatabase!.uguisuNicoliveUsers;
+  final uguisuNicoliveRooms = uguisuDatabase!.uguisuNicoliveRooms;
+  final uguisuNicoliveComments = uguisuDatabase!.uguisuNicoliveComments;
 
-  final rawJson = await file.readAsString(encoding: utf8);
-  final json = jsonDecode(rawJson);
+  final programCache = await (uguisuDatabase!.select(uguisuNicolivePrograms)
+    ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.programId.equals(programId))
+  ).getSingle();
 
-  if (json['version'] != '1') {
-    mainLogger.warning('Unsupported live comment cache json version. Ignore this: ${file.path}');
-    return null;
-  }
+  final communtityCache = await (uguisuDatabase!.select(uguisuNicoliveCommunities)
+    ..where((tbl) => tbl.id.equals(programCache.community))
+  ).getSingle();
+  final communityId = communtityCache.communityId;
 
-  final communityId = json['communityId'];
-  final liveId = json['liveId'];
+  final roomCaches = await (uguisuDatabase!.select(uguisuNicoliveRooms)
+    ..where((tbl) => tbl.program.equals(programCache.id))
+  ).get();
 
-  final rawRooms = json['rooms'];
   final rooms = <NiconicoLiveRoom>[];
-  for (final room in rawRooms) {
-    final roomName = room['name'];
-    final thread = room['thread'];
-    final rawChatMessages = room['chatMessages'];
+  for (final roomCache in roomCaches) {
+    final commentCaches = await (uguisuDatabase!.select(uguisuNicoliveComments)
+      ..where((tbl) => tbl.room.equals(roomCache.id))
+    ).get();
+
     final chatMessages = <ChatMessage>[];
-    for (final chatMessage in rawChatMessages) {
+    for (final commentCache in commentCaches) {
+      final date = commentCache.postedAt.microsecondsSinceEpoch.floor();
+      final dateUsec = ((commentCache.postedAt.microsecondsSinceEpoch - date) * 1000 * 1000).floor();
+      
+      final userCache = await (uguisuDatabase!.select(uguisuNicoliveUsers)
+        ..where((tbl) => tbl.id.equals(commentCache.user))
+      ).getSingle();
+
       chatMessages.add(
         ChatMessage(
-          anonymity: chatMessage['anonymity'],
-          content: chatMessage['content'],
-          date: chatMessage['date'],
-          dateUsec: chatMessage['dateUsec'],
-          no: chatMessage['no'],
-          premium: chatMessage['premium'],
-          thread: chatMessage['thread'],
-          mail: chatMessage['mail'],
-          userId: chatMessage['userId'],
-          vpos: chatMessage['vpos'],
+          thread: roomCache.thread,
+          no: commentCache.no,
+          userId: userCache.userId,
+          anonymity: commentCache.anonymity,
+          content: commentCache.content,
+          date: date,
+          dateUsec: dateUsec,
+          premium: commentCache.premium,
+          mail: commentCache.mail,
+          vpos: commentCache.vpos,
+          fetchedAt: commentCache.fetchedAt,
         )
       );
     }
 
     rooms.add(
       NiconicoLiveRoom(
-        name: roomName,
-        thread: thread,
-      )..chatMessages.addAll(chatMessages)
+        name: roomCache.name,
+        thread: roomCache.thread,
+        fetchedAt: roomCache.fetchedAt,
+      )
+        ..chatMessages.addAll(chatMessages)
     );
   }
 
   return NiconicoLiveComment(
     communityId: communityId,
-    liveId: liveId,
+    programId: programId,
     rooms: rooms,
   );
 }
 
+Future<UguisuNicoliveUser> loadOrFetchUserCacheIncludingAnonymous({
+  required bool isAnonymous,
+  required String userId,
+}) async {
+  final uguisuNicoliveUsers = uguisuDatabase!.uguisuNicoliveUsers;
+
+  if (isAnonymous) {
+    return await uguisuDatabase!.into(uguisuNicoliveUsers).insertReturning(
+      UguisuNicoliveUsersCompanion.insert(
+        serviceId: 'nicolive',
+        userId: userId,
+        anonymity: false,
+        nickname: const Value(null),
+        iconUrl: const Value(null),
+        fetchedAt: DateTime.now().toUtc(),
+      ),
+      onConflict: DoUpdate.withExcluded(
+        (old, excluded) => UguisuNicoliveUsersCompanion.custom(
+          nickname: excluded.nickname,
+          iconUrl: excluded.iconUrl,
+          fetchedAt: excluded.fetchedAt,
+        ),
+        target: [uguisuNicoliveUsers.serviceId, uguisuNicoliveUsers.userId],
+      ),
+    );
+  } else {
+    final userIdInt = int.parse(userId);
+    final userPageUri = await simpleClient!.getUserPageUri!.call(userIdInt);
+    await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: userIdInt, userPageUri: userPageUri);
+
+    final userPageCache = await (uguisuDatabase!.select(uguisuDatabase!.uguisuNicoliveUsers)
+      ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.userId.equals(userId))
+    ).getSingle();
+
+    return userPageCache;
+  }
+}
+
 Future<void> saveLiveComment({
   required NiconicoLiveComment liveComment,
-  required File file,
 }) async {
-  final rooms = <Map<String, dynamic>>[];
+  final uguisuNicolivePrograms = uguisuDatabase!.uguisuNicolivePrograms;
+  final uguisuNicoliveRooms = uguisuDatabase!.uguisuNicoliveRooms;
+  final uguisuNicoliveComments = uguisuDatabase!.uguisuNicoliveComments;
+
+  final programCache =  await (uguisuDatabase!.select(uguisuNicolivePrograms)
+    ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.programId.equals(liveComment.programId))
+  ).getSingle();
+
   for (final room in liveComment.rooms) {
-    final chatMessages = <Map<String, dynamic>>[];
+    final roomCache = await uguisuDatabase!.into(uguisuNicoliveRooms).insertReturning(
+      UguisuNicoliveRoomsCompanion.insert(
+        program: programCache.id,
+        thread: room.thread,
+        name: room.name,
+        fetchedAt: room.fetchedAt,
+      ),
+      onConflict: DoUpdate.withExcluded(
+        (old, excluded) => UguisuNicoliveRoomsCompanion.custom(
+          name: excluded.name,
+          fetchedAt: excluded.fetchedAt,
+        ),
+        target: [uguisuNicoliveRooms.program, uguisuNicoliveRooms.thread],
+      ),
+    );
+
     for (final chatMessage in room.chatMessages) {
-      final rawChatMessage = {
-        'content': chatMessage.content,
-        'date': chatMessage.date,
-        'dateUsec': chatMessage.dateUsec,
-        'no': chatMessage.no,
-        'thread': chatMessage.thread,
-        'userId': chatMessage.userId,
-        'vpos': chatMessage.vpos,
-      };
-      if (chatMessage.anonymity != null) rawChatMessage['anonymity'] = chatMessage.anonymity!;
-      if (chatMessage.premium != null) rawChatMessage['premium'] = chatMessage.premium!;
-      if (chatMessage.mail != null) rawChatMessage['mail'] = chatMessage.mail!;
+      // 匿名ユーザID（非数値ID）
+      final isAnonymous = chatMessage.anonymity == 1;
 
-      chatMessages.add(rawChatMessage);
+      // create or update user record (including anonymous user)
+      final userCache = await loadOrFetchUserCacheIncludingAnonymous(isAnonymous: isAnonymous, userId: chatMessage.userId);
+
+      await uguisuDatabase!.into(uguisuNicoliveComments).insert(
+        UguisuNicoliveCommentsCompanion.insert(
+          room: roomCache.id,
+          user: userCache.id,
+          no: chatMessage.no,
+          content: chatMessage.content,
+          anonymity: Value(chatMessage.anonymity),
+          premium: Value(chatMessage.premium),
+          mail: Value(chatMessage.mail),
+          postedAt: DateTime.fromMicrosecondsSinceEpoch(chatMessage.date * 1000 * 1000 + chatMessage.dateUsec, isUtc: true).toUtc(),
+          vpos: chatMessage.vpos,
+          fetchedAt: chatMessage.fetchedAt,
+        ),
+        onConflict: DoUpdate.withExcluded(
+          (old, excluded) => UguisuNicoliveCommentsCompanion.custom(
+            user: excluded.user,
+            content: excluded.content,
+            anonymity: excluded.anonymity,
+            premium: excluded.premium,
+            mail: excluded.mail,
+            postedAt: excluded.postedAt,
+            vpos: excluded.vpos,
+            fetchedAt: excluded.fetchedAt,
+          ),
+          target: [uguisuNicoliveComments.room, uguisuNicoliveComments.no],
+        ),
+      );
     }
-    rooms.add({
-      'name': room.name,
-      'thread': room.thread,
-      'chatMessages': chatMessages,
-    });
   }
-
-  final rawJson = jsonEncode({
-    'version': '1',
-    'communityId': liveComment.communityId,
-    'liveId': liveComment.liveId,
-    'rooms': rooms,
-  });
-
-  await file.parent.create(recursive: true);
-  await file.writeAsString(rawJson, encoding: utf8, flush: true);
 }
 
 class NiconicoLoginUser {
@@ -942,7 +1015,7 @@ class SimpleNiconicoUserIconImageBytesResolver with NiconicoUserIconImageBytesRe
   @override
   Future<Uint8List>? resolveUserIconImageBytes({required int userId}) async {
     final userPage = await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: userId, userPageUri: Uri.parse('https://www.nicovideo.jp/user/$userId'));
-    final userIcon = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(userId: userId, iconUri: Uri.parse(userPage.userPage.iconUrl));
+    final userIcon = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(userId: userId, iconUri: Uri.parse(userPage.userPage.iconUrl!));
 
     return userIcon.userIcon.iconBytes;
   }
@@ -1129,7 +1202,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       var room = rooms.firstWhereOrNull((room) => room.thread == chatMessage.chatMessage.thread);
       if (room == null) {
         final rawRoom = simpleClient!.rooms.firstWhere((other) => other.roomMessage.threadId == chatMessage.chatMessage.thread);
-        room = NiconicoLiveRoom(name: rawRoom.roomMessage.name, thread: rawRoom.roomMessage.threadId);
+        room = NiconicoLiveRoom(name: rawRoom.roomMessage.name, thread: rawRoom.roomMessage.threadId, fetchedAt: rawRoom.fetchedAt);
         rooms.add(room);
       }
 
@@ -1139,10 +1212,9 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     await saveLiveComment(
       liveComment: NiconicoLiveComment(
         communityId: livePage!.socialGroup.id,
-        liveId: livePage!.program.nicoliveProgramId,
+        programId: livePage!.program.nicoliveProgramId,
         rooms: rooms,
       ),
-      file: await getLiveCommentCachePath(communityId: livePage!.socialGroup.id, liveId: livePage!.program.nicoliveProgramId)
     );
   }
 
@@ -1210,7 +1282,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
         final liveUserId = int.parse(livePage.program.supplier.programProviderId);
         final livePageSupplierUserPageCache = await simpleClient!.userPageCacheClient!.loadOrFetchUserPage(userId: liveUserId, userPageUri: await simpleClient!.getUserPageUri!.call(liveUserId));
-        final livePageSupplierUserIconCache = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(userId: liveUserId, iconUri: Uri.parse(livePageSupplierUserPageCache.userPage.iconUrl));
+        final livePageSupplierUserIconCache = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(userId: liveUserId, iconUri: Uri.parse(livePageSupplierUserPageCache.userPage.iconUrl!));
 
         await saveLivePage(
           livePage: livePage,
@@ -1313,7 +1385,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
 
           final loginUserIconCache = await simpleClient!.userIconCacheClient!.loadOrFetchIcon(
             userId: userId,
-            iconUri: Uri.parse(loginUserPageCache.userPage.iconUrl),
+            iconUri: Uri.parse(loginUserPageCache.userPage.iconUrl!),
           );
 
           loginUserData.setLoginUserData(
