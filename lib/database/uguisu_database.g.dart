@@ -12,15 +12,17 @@ class UguisuNicoliveUser extends DataClass
   final int id;
   final String serviceId;
   final int userId;
-  final String nickname;
-  final String iconUrl;
+  final bool anonymity;
+  final String? nickname;
+  final String? iconUrl;
   final DateTime fetchedAt;
   const UguisuNicoliveUser(
       {required this.id,
       required this.serviceId,
       required this.userId,
-      required this.nickname,
-      required this.iconUrl,
+      required this.anonymity,
+      this.nickname,
+      this.iconUrl,
       required this.fetchedAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -28,8 +30,13 @@ class UguisuNicoliveUser extends DataClass
     map['id'] = Variable<int>(id);
     map['service_id'] = Variable<String>(serviceId);
     map['user_id'] = Variable<int>(userId);
-    map['nickname'] = Variable<String>(nickname);
-    map['icon_url'] = Variable<String>(iconUrl);
+    map['anonymity'] = Variable<bool>(anonymity);
+    if (!nullToAbsent || nickname != null) {
+      map['nickname'] = Variable<String>(nickname);
+    }
+    if (!nullToAbsent || iconUrl != null) {
+      map['icon_url'] = Variable<String>(iconUrl);
+    }
     map['fetched_at'] = Variable<DateTime>(fetchedAt);
     return map;
   }
@@ -39,8 +46,13 @@ class UguisuNicoliveUser extends DataClass
       id: Value(id),
       serviceId: Value(serviceId),
       userId: Value(userId),
-      nickname: Value(nickname),
-      iconUrl: Value(iconUrl),
+      anonymity: Value(anonymity),
+      nickname: nickname == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nickname),
+      iconUrl: iconUrl == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconUrl),
       fetchedAt: Value(fetchedAt),
     );
   }
@@ -52,8 +64,9 @@ class UguisuNicoliveUser extends DataClass
       id: serializer.fromJson<int>(json['id']),
       serviceId: serializer.fromJson<String>(json['serviceId']),
       userId: serializer.fromJson<int>(json['userId']),
-      nickname: serializer.fromJson<String>(json['nickname']),
-      iconUrl: serializer.fromJson<String>(json['iconUrl']),
+      anonymity: serializer.fromJson<bool>(json['anonymity']),
+      nickname: serializer.fromJson<String?>(json['nickname']),
+      iconUrl: serializer.fromJson<String?>(json['iconUrl']),
       fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
     );
   }
@@ -64,8 +77,9 @@ class UguisuNicoliveUser extends DataClass
       'id': serializer.toJson<int>(id),
       'serviceId': serializer.toJson<String>(serviceId),
       'userId': serializer.toJson<int>(userId),
-      'nickname': serializer.toJson<String>(nickname),
-      'iconUrl': serializer.toJson<String>(iconUrl),
+      'anonymity': serializer.toJson<bool>(anonymity),
+      'nickname': serializer.toJson<String?>(nickname),
+      'iconUrl': serializer.toJson<String?>(iconUrl),
       'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
     };
   }
@@ -74,15 +88,17 @@ class UguisuNicoliveUser extends DataClass
           {int? id,
           String? serviceId,
           int? userId,
-          String? nickname,
-          String? iconUrl,
+          bool? anonymity,
+          Value<String?> nickname = const Value.absent(),
+          Value<String?> iconUrl = const Value.absent(),
           DateTime? fetchedAt}) =>
       UguisuNicoliveUser(
         id: id ?? this.id,
         serviceId: serviceId ?? this.serviceId,
         userId: userId ?? this.userId,
-        nickname: nickname ?? this.nickname,
-        iconUrl: iconUrl ?? this.iconUrl,
+        anonymity: anonymity ?? this.anonymity,
+        nickname: nickname.present ? nickname.value : this.nickname,
+        iconUrl: iconUrl.present ? iconUrl.value : this.iconUrl,
         fetchedAt: fetchedAt ?? this.fetchedAt,
       );
   @override
@@ -91,6 +107,7 @@ class UguisuNicoliveUser extends DataClass
           ..write('id: $id, ')
           ..write('serviceId: $serviceId, ')
           ..write('userId: $userId, ')
+          ..write('anonymity: $anonymity, ')
           ..write('nickname: $nickname, ')
           ..write('iconUrl: $iconUrl, ')
           ..write('fetchedAt: $fetchedAt')
@@ -99,8 +116,8 @@ class UguisuNicoliveUser extends DataClass
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, serviceId, userId, nickname, iconUrl, fetchedAt);
+  int get hashCode => Object.hash(
+      id, serviceId, userId, anonymity, nickname, iconUrl, fetchedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -108,6 +125,7 @@ class UguisuNicoliveUser extends DataClass
           other.id == this.id &&
           other.serviceId == this.serviceId &&
           other.userId == this.userId &&
+          other.anonymity == this.anonymity &&
           other.nickname == this.nickname &&
           other.iconUrl == this.iconUrl &&
           other.fetchedAt == this.fetchedAt);
@@ -117,13 +135,15 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
   final Value<int> id;
   final Value<String> serviceId;
   final Value<int> userId;
-  final Value<String> nickname;
-  final Value<String> iconUrl;
+  final Value<bool> anonymity;
+  final Value<String?> nickname;
+  final Value<String?> iconUrl;
   final Value<DateTime> fetchedAt;
   const UguisuNicoliveUsersCompanion({
     this.id = const Value.absent(),
     this.serviceId = const Value.absent(),
     this.userId = const Value.absent(),
+    this.anonymity = const Value.absent(),
     this.nickname = const Value.absent(),
     this.iconUrl = const Value.absent(),
     this.fetchedAt = const Value.absent(),
@@ -132,18 +152,19 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
     this.id = const Value.absent(),
     required String serviceId,
     required int userId,
-    required String nickname,
-    required String iconUrl,
+    required bool anonymity,
+    this.nickname = const Value.absent(),
+    this.iconUrl = const Value.absent(),
     required DateTime fetchedAt,
   })  : serviceId = Value(serviceId),
         userId = Value(userId),
-        nickname = Value(nickname),
-        iconUrl = Value(iconUrl),
+        anonymity = Value(anonymity),
         fetchedAt = Value(fetchedAt);
   static Insertable<UguisuNicoliveUser> custom({
     Expression<int>? id,
     Expression<String>? serviceId,
     Expression<int>? userId,
+    Expression<bool>? anonymity,
     Expression<String>? nickname,
     Expression<String>? iconUrl,
     Expression<DateTime>? fetchedAt,
@@ -152,6 +173,7 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
       if (id != null) 'id': id,
       if (serviceId != null) 'service_id': serviceId,
       if (userId != null) 'user_id': userId,
+      if (anonymity != null) 'anonymity': anonymity,
       if (nickname != null) 'nickname': nickname,
       if (iconUrl != null) 'icon_url': iconUrl,
       if (fetchedAt != null) 'fetched_at': fetchedAt,
@@ -162,13 +184,15 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
       {Value<int>? id,
       Value<String>? serviceId,
       Value<int>? userId,
-      Value<String>? nickname,
-      Value<String>? iconUrl,
+      Value<bool>? anonymity,
+      Value<String?>? nickname,
+      Value<String?>? iconUrl,
       Value<DateTime>? fetchedAt}) {
     return UguisuNicoliveUsersCompanion(
       id: id ?? this.id,
       serviceId: serviceId ?? this.serviceId,
       userId: userId ?? this.userId,
+      anonymity: anonymity ?? this.anonymity,
       nickname: nickname ?? this.nickname,
       iconUrl: iconUrl ?? this.iconUrl,
       fetchedAt: fetchedAt ?? this.fetchedAt,
@@ -186,6 +210,9 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
     }
     if (userId.present) {
       map['user_id'] = Variable<int>(userId.value);
+    }
+    if (anonymity.present) {
+      map['anonymity'] = Variable<bool>(anonymity.value);
     }
     if (nickname.present) {
       map['nickname'] = Variable<String>(nickname.value);
@@ -205,6 +232,7 @@ class UguisuNicoliveUsersCompanion extends UpdateCompanion<UguisuNicoliveUser> {
           ..write('id: $id, ')
           ..write('serviceId: $serviceId, ')
           ..write('userId: $userId, ')
+          ..write('anonymity: $anonymity, ')
           ..write('nickname: $nickname, ')
           ..write('iconUrl: $iconUrl, ')
           ..write('fetchedAt: $fetchedAt')
@@ -236,16 +264,23 @@ class $UguisuNicoliveUsersTable extends UguisuNicoliveUsers
   late final GeneratedColumn<int> userId = GeneratedColumn<int>(
       'user_id', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  final VerificationMeta _anonymityMeta = const VerificationMeta('anonymity');
+  @override
+  late final GeneratedColumn<bool> anonymity = GeneratedColumn<bool>(
+      'anonymity', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: true,
+      defaultConstraints: 'CHECK (anonymity IN (0, 1))');
   final VerificationMeta _nicknameMeta = const VerificationMeta('nickname');
   @override
   late final GeneratedColumn<String> nickname = GeneratedColumn<String>(
-      'nickname', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'nickname', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   final VerificationMeta _iconUrlMeta = const VerificationMeta('iconUrl');
   @override
   late final GeneratedColumn<String> iconUrl = GeneratedColumn<String>(
-      'icon_url', aliasedName, false,
-      type: DriftSqlType.string, requiredDuringInsert: true);
+      'icon_url', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   final VerificationMeta _fetchedAtMeta = const VerificationMeta('fetchedAt');
   @override
   late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
@@ -253,7 +288,7 @@ class $UguisuNicoliveUsersTable extends UguisuNicoliveUsers
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, serviceId, userId, nickname, iconUrl, fetchedAt];
+      [id, serviceId, userId, anonymity, nickname, iconUrl, fetchedAt];
   @override
   String get aliasedName => _alias ?? 'uguisu_nicolive_users';
   @override
@@ -278,17 +313,19 @@ class $UguisuNicoliveUsersTable extends UguisuNicoliveUsers
     } else if (isInserting) {
       context.missing(_userIdMeta);
     }
+    if (data.containsKey('anonymity')) {
+      context.handle(_anonymityMeta,
+          anonymity.isAcceptableOrUnknown(data['anonymity']!, _anonymityMeta));
+    } else if (isInserting) {
+      context.missing(_anonymityMeta);
+    }
     if (data.containsKey('nickname')) {
       context.handle(_nicknameMeta,
           nickname.isAcceptableOrUnknown(data['nickname']!, _nicknameMeta));
-    } else if (isInserting) {
-      context.missing(_nicknameMeta);
     }
     if (data.containsKey('icon_url')) {
       context.handle(_iconUrlMeta,
           iconUrl.isAcceptableOrUnknown(data['icon_url']!, _iconUrlMeta));
-    } else if (isInserting) {
-      context.missing(_iconUrlMeta);
     }
     if (data.containsKey('fetched_at')) {
       context.handle(_fetchedAtMeta,
@@ -315,10 +352,12 @@ class $UguisuNicoliveUsersTable extends UguisuNicoliveUsers
           .read(DriftSqlType.string, data['${effectivePrefix}service_id'])!,
       userId: attachedDatabase.options.types
           .read(DriftSqlType.int, data['${effectivePrefix}user_id'])!,
+      anonymity: attachedDatabase.options.types
+          .read(DriftSqlType.bool, data['${effectivePrefix}anonymity'])!,
       nickname: attachedDatabase.options.types
-          .read(DriftSqlType.string, data['${effectivePrefix}nickname'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}nickname']),
       iconUrl: attachedDatabase.options.types
-          .read(DriftSqlType.string, data['${effectivePrefix}icon_url'])!,
+          .read(DriftSqlType.string, data['${effectivePrefix}icon_url']),
       fetchedAt: attachedDatabase.options.types
           .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
     );
@@ -1905,6 +1944,771 @@ class $UguisuNicoliveProgramsTable extends UguisuNicolivePrograms
   }
 }
 
+class UguisuNicoliveRoom extends DataClass
+    implements Insertable<UguisuNicoliveRoom> {
+  final int id;
+  final int program;
+  final String thread;
+  final String name;
+  const UguisuNicoliveRoom(
+      {required this.id,
+      required this.program,
+      required this.thread,
+      required this.name});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['program'] = Variable<int>(program);
+    map['thread'] = Variable<String>(thread);
+    map['name'] = Variable<String>(name);
+    return map;
+  }
+
+  UguisuNicoliveRoomsCompanion toCompanion(bool nullToAbsent) {
+    return UguisuNicoliveRoomsCompanion(
+      id: Value(id),
+      program: Value(program),
+      thread: Value(thread),
+      name: Value(name),
+    );
+  }
+
+  factory UguisuNicoliveRoom.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return UguisuNicoliveRoom(
+      id: serializer.fromJson<int>(json['id']),
+      program: serializer.fromJson<int>(json['program']),
+      thread: serializer.fromJson<String>(json['thread']),
+      name: serializer.fromJson<String>(json['name']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'program': serializer.toJson<int>(program),
+      'thread': serializer.toJson<String>(thread),
+      'name': serializer.toJson<String>(name),
+    };
+  }
+
+  UguisuNicoliveRoom copyWith(
+          {int? id, int? program, String? thread, String? name}) =>
+      UguisuNicoliveRoom(
+        id: id ?? this.id,
+        program: program ?? this.program,
+        thread: thread ?? this.thread,
+        name: name ?? this.name,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('UguisuNicoliveRoom(')
+          ..write('id: $id, ')
+          ..write('program: $program, ')
+          ..write('thread: $thread, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, program, thread, name);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UguisuNicoliveRoom &&
+          other.id == this.id &&
+          other.program == this.program &&
+          other.thread == this.thread &&
+          other.name == this.name);
+}
+
+class UguisuNicoliveRoomsCompanion extends UpdateCompanion<UguisuNicoliveRoom> {
+  final Value<int> id;
+  final Value<int> program;
+  final Value<String> thread;
+  final Value<String> name;
+  const UguisuNicoliveRoomsCompanion({
+    this.id = const Value.absent(),
+    this.program = const Value.absent(),
+    this.thread = const Value.absent(),
+    this.name = const Value.absent(),
+  });
+  UguisuNicoliveRoomsCompanion.insert({
+    this.id = const Value.absent(),
+    required int program,
+    required String thread,
+    required String name,
+  })  : program = Value(program),
+        thread = Value(thread),
+        name = Value(name);
+  static Insertable<UguisuNicoliveRoom> custom({
+    Expression<int>? id,
+    Expression<int>? program,
+    Expression<String>? thread,
+    Expression<String>? name,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (program != null) 'program': program,
+      if (thread != null) 'thread': thread,
+      if (name != null) 'name': name,
+    });
+  }
+
+  UguisuNicoliveRoomsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? program,
+      Value<String>? thread,
+      Value<String>? name}) {
+    return UguisuNicoliveRoomsCompanion(
+      id: id ?? this.id,
+      program: program ?? this.program,
+      thread: thread ?? this.thread,
+      name: name ?? this.name,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (program.present) {
+      map['program'] = Variable<int>(program.value);
+    }
+    if (thread.present) {
+      map['thread'] = Variable<String>(thread.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UguisuNicoliveRoomsCompanion(')
+          ..write('id: $id, ')
+          ..write('program: $program, ')
+          ..write('thread: $thread, ')
+          ..write('name: $name')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $UguisuNicoliveRoomsTable extends UguisuNicoliveRooms
+    with TableInfo<$UguisuNicoliveRoomsTable, UguisuNicoliveRoom> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $UguisuNicoliveRoomsTable(this.attachedDatabase, [this._alias]);
+  final VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints: 'PRIMARY KEY AUTOINCREMENT');
+  final VerificationMeta _programMeta = const VerificationMeta('program');
+  @override
+  late final GeneratedColumn<int> program = GeneratedColumn<int>(
+      'program', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: 'REFERENCES uguisu_nicolive_programs (id)');
+  final VerificationMeta _threadMeta = const VerificationMeta('thread');
+  @override
+  late final GeneratedColumn<String> thread = GeneratedColumn<String>(
+      'thread', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  final VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [id, program, thread, name];
+  @override
+  String get aliasedName => _alias ?? 'uguisu_nicolive_rooms';
+  @override
+  String get actualTableName => 'uguisu_nicolive_rooms';
+  @override
+  VerificationContext validateIntegrity(Insertable<UguisuNicoliveRoom> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('program')) {
+      context.handle(_programMeta,
+          program.isAcceptableOrUnknown(data['program']!, _programMeta));
+    } else if (isInserting) {
+      context.missing(_programMeta);
+    }
+    if (data.containsKey('thread')) {
+      context.handle(_threadMeta,
+          thread.isAcceptableOrUnknown(data['thread']!, _threadMeta));
+    } else if (isInserting) {
+      context.missing(_threadMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {program, thread},
+      ];
+  @override
+  UguisuNicoliveRoom map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return UguisuNicoliveRoom(
+      id: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      program: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}program'])!,
+      thread: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}thread'])!,
+      name: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+    );
+  }
+
+  @override
+  $UguisuNicoliveRoomsTable createAlias(String alias) {
+    return $UguisuNicoliveRoomsTable(attachedDatabase, alias);
+  }
+}
+
+class UguisuNicoliveComment extends DataClass
+    implements Insertable<UguisuNicoliveComment> {
+  final int id;
+  final int room;
+  final int user;
+  final int no;
+  final String content;
+  final int? anonymity;
+  final int? premium;
+  final String? mail;
+  final DateTime postedAt;
+  final int vpos;
+  final DateTime fetchedAt;
+  const UguisuNicoliveComment(
+      {required this.id,
+      required this.room,
+      required this.user,
+      required this.no,
+      required this.content,
+      this.anonymity,
+      this.premium,
+      this.mail,
+      required this.postedAt,
+      required this.vpos,
+      required this.fetchedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['room'] = Variable<int>(room);
+    map['user'] = Variable<int>(user);
+    map['no'] = Variable<int>(no);
+    map['content'] = Variable<String>(content);
+    if (!nullToAbsent || anonymity != null) {
+      map['anonymity'] = Variable<int>(anonymity);
+    }
+    if (!nullToAbsent || premium != null) {
+      map['premium'] = Variable<int>(premium);
+    }
+    if (!nullToAbsent || mail != null) {
+      map['mail'] = Variable<String>(mail);
+    }
+    map['posted_at'] = Variable<DateTime>(postedAt);
+    map['vpos'] = Variable<int>(vpos);
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    return map;
+  }
+
+  UguisuNicoliveCommentsCompanion toCompanion(bool nullToAbsent) {
+    return UguisuNicoliveCommentsCompanion(
+      id: Value(id),
+      room: Value(room),
+      user: Value(user),
+      no: Value(no),
+      content: Value(content),
+      anonymity: anonymity == null && nullToAbsent
+          ? const Value.absent()
+          : Value(anonymity),
+      premium: premium == null && nullToAbsent
+          ? const Value.absent()
+          : Value(premium),
+      mail: mail == null && nullToAbsent ? const Value.absent() : Value(mail),
+      postedAt: Value(postedAt),
+      vpos: Value(vpos),
+      fetchedAt: Value(fetchedAt),
+    );
+  }
+
+  factory UguisuNicoliveComment.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return UguisuNicoliveComment(
+      id: serializer.fromJson<int>(json['id']),
+      room: serializer.fromJson<int>(json['room']),
+      user: serializer.fromJson<int>(json['user']),
+      no: serializer.fromJson<int>(json['no']),
+      content: serializer.fromJson<String>(json['content']),
+      anonymity: serializer.fromJson<int?>(json['anonymity']),
+      premium: serializer.fromJson<int?>(json['premium']),
+      mail: serializer.fromJson<String?>(json['mail']),
+      postedAt: serializer.fromJson<DateTime>(json['postedAt']),
+      vpos: serializer.fromJson<int>(json['vpos']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'room': serializer.toJson<int>(room),
+      'user': serializer.toJson<int>(user),
+      'no': serializer.toJson<int>(no),
+      'content': serializer.toJson<String>(content),
+      'anonymity': serializer.toJson<int?>(anonymity),
+      'premium': serializer.toJson<int?>(premium),
+      'mail': serializer.toJson<String?>(mail),
+      'postedAt': serializer.toJson<DateTime>(postedAt),
+      'vpos': serializer.toJson<int>(vpos),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+    };
+  }
+
+  UguisuNicoliveComment copyWith(
+          {int? id,
+          int? room,
+          int? user,
+          int? no,
+          String? content,
+          Value<int?> anonymity = const Value.absent(),
+          Value<int?> premium = const Value.absent(),
+          Value<String?> mail = const Value.absent(),
+          DateTime? postedAt,
+          int? vpos,
+          DateTime? fetchedAt}) =>
+      UguisuNicoliveComment(
+        id: id ?? this.id,
+        room: room ?? this.room,
+        user: user ?? this.user,
+        no: no ?? this.no,
+        content: content ?? this.content,
+        anonymity: anonymity.present ? anonymity.value : this.anonymity,
+        premium: premium.present ? premium.value : this.premium,
+        mail: mail.present ? mail.value : this.mail,
+        postedAt: postedAt ?? this.postedAt,
+        vpos: vpos ?? this.vpos,
+        fetchedAt: fetchedAt ?? this.fetchedAt,
+      );
+  @override
+  String toString() {
+    return (StringBuffer('UguisuNicoliveComment(')
+          ..write('id: $id, ')
+          ..write('room: $room, ')
+          ..write('user: $user, ')
+          ..write('no: $no, ')
+          ..write('content: $content, ')
+          ..write('anonymity: $anonymity, ')
+          ..write('premium: $premium, ')
+          ..write('mail: $mail, ')
+          ..write('postedAt: $postedAt, ')
+          ..write('vpos: $vpos, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, room, user, no, content, anonymity,
+      premium, mail, postedAt, vpos, fetchedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UguisuNicoliveComment &&
+          other.id == this.id &&
+          other.room == this.room &&
+          other.user == this.user &&
+          other.no == this.no &&
+          other.content == this.content &&
+          other.anonymity == this.anonymity &&
+          other.premium == this.premium &&
+          other.mail == this.mail &&
+          other.postedAt == this.postedAt &&
+          other.vpos == this.vpos &&
+          other.fetchedAt == this.fetchedAt);
+}
+
+class UguisuNicoliveCommentsCompanion
+    extends UpdateCompanion<UguisuNicoliveComment> {
+  final Value<int> id;
+  final Value<int> room;
+  final Value<int> user;
+  final Value<int> no;
+  final Value<String> content;
+  final Value<int?> anonymity;
+  final Value<int?> premium;
+  final Value<String?> mail;
+  final Value<DateTime> postedAt;
+  final Value<int> vpos;
+  final Value<DateTime> fetchedAt;
+  const UguisuNicoliveCommentsCompanion({
+    this.id = const Value.absent(),
+    this.room = const Value.absent(),
+    this.user = const Value.absent(),
+    this.no = const Value.absent(),
+    this.content = const Value.absent(),
+    this.anonymity = const Value.absent(),
+    this.premium = const Value.absent(),
+    this.mail = const Value.absent(),
+    this.postedAt = const Value.absent(),
+    this.vpos = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+  });
+  UguisuNicoliveCommentsCompanion.insert({
+    this.id = const Value.absent(),
+    required int room,
+    required int user,
+    required int no,
+    required String content,
+    this.anonymity = const Value.absent(),
+    this.premium = const Value.absent(),
+    this.mail = const Value.absent(),
+    required DateTime postedAt,
+    required int vpos,
+    required DateTime fetchedAt,
+  })  : room = Value(room),
+        user = Value(user),
+        no = Value(no),
+        content = Value(content),
+        postedAt = Value(postedAt),
+        vpos = Value(vpos),
+        fetchedAt = Value(fetchedAt);
+  static Insertable<UguisuNicoliveComment> custom({
+    Expression<int>? id,
+    Expression<int>? room,
+    Expression<int>? user,
+    Expression<int>? no,
+    Expression<String>? content,
+    Expression<int>? anonymity,
+    Expression<int>? premium,
+    Expression<String>? mail,
+    Expression<DateTime>? postedAt,
+    Expression<int>? vpos,
+    Expression<DateTime>? fetchedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (room != null) 'room': room,
+      if (user != null) 'user': user,
+      if (no != null) 'no': no,
+      if (content != null) 'content': content,
+      if (anonymity != null) 'anonymity': anonymity,
+      if (premium != null) 'premium': premium,
+      if (mail != null) 'mail': mail,
+      if (postedAt != null) 'posted_at': postedAt,
+      if (vpos != null) 'vpos': vpos,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+    });
+  }
+
+  UguisuNicoliveCommentsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? room,
+      Value<int>? user,
+      Value<int>? no,
+      Value<String>? content,
+      Value<int?>? anonymity,
+      Value<int?>? premium,
+      Value<String?>? mail,
+      Value<DateTime>? postedAt,
+      Value<int>? vpos,
+      Value<DateTime>? fetchedAt}) {
+    return UguisuNicoliveCommentsCompanion(
+      id: id ?? this.id,
+      room: room ?? this.room,
+      user: user ?? this.user,
+      no: no ?? this.no,
+      content: content ?? this.content,
+      anonymity: anonymity ?? this.anonymity,
+      premium: premium ?? this.premium,
+      mail: mail ?? this.mail,
+      postedAt: postedAt ?? this.postedAt,
+      vpos: vpos ?? this.vpos,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (room.present) {
+      map['room'] = Variable<int>(room.value);
+    }
+    if (user.present) {
+      map['user'] = Variable<int>(user.value);
+    }
+    if (no.present) {
+      map['no'] = Variable<int>(no.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (anonymity.present) {
+      map['anonymity'] = Variable<int>(anonymity.value);
+    }
+    if (premium.present) {
+      map['premium'] = Variable<int>(premium.value);
+    }
+    if (mail.present) {
+      map['mail'] = Variable<String>(mail.value);
+    }
+    if (postedAt.present) {
+      map['posted_at'] = Variable<DateTime>(postedAt.value);
+    }
+    if (vpos.present) {
+      map['vpos'] = Variable<int>(vpos.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UguisuNicoliveCommentsCompanion(')
+          ..write('id: $id, ')
+          ..write('room: $room, ')
+          ..write('user: $user, ')
+          ..write('no: $no, ')
+          ..write('content: $content, ')
+          ..write('anonymity: $anonymity, ')
+          ..write('premium: $premium, ')
+          ..write('mail: $mail, ')
+          ..write('postedAt: $postedAt, ')
+          ..write('vpos: $vpos, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $UguisuNicoliveCommentsTable extends UguisuNicoliveComments
+    with TableInfo<$UguisuNicoliveCommentsTable, UguisuNicoliveComment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $UguisuNicoliveCommentsTable(this.attachedDatabase, [this._alias]);
+  final VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints: 'PRIMARY KEY AUTOINCREMENT');
+  final VerificationMeta _roomMeta = const VerificationMeta('room');
+  @override
+  late final GeneratedColumn<int> room = GeneratedColumn<int>(
+      'room', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: 'REFERENCES uguisu_nicolive_rooms (id)');
+  final VerificationMeta _userMeta = const VerificationMeta('user');
+  @override
+  late final GeneratedColumn<int> user = GeneratedColumn<int>(
+      'user', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: 'REFERENCES uguisu_nicolive_users (id)');
+  final VerificationMeta _noMeta = const VerificationMeta('no');
+  @override
+  late final GeneratedColumn<int> no = GeneratedColumn<int>(
+      'no', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  final VerificationMeta _contentMeta = const VerificationMeta('content');
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+      'content', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  final VerificationMeta _anonymityMeta = const VerificationMeta('anonymity');
+  @override
+  late final GeneratedColumn<int> anonymity = GeneratedColumn<int>(
+      'anonymity', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  final VerificationMeta _premiumMeta = const VerificationMeta('premium');
+  @override
+  late final GeneratedColumn<int> premium = GeneratedColumn<int>(
+      'premium', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  final VerificationMeta _mailMeta = const VerificationMeta('mail');
+  @override
+  late final GeneratedColumn<String> mail = GeneratedColumn<String>(
+      'mail', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  final VerificationMeta _postedAtMeta = const VerificationMeta('postedAt');
+  @override
+  late final GeneratedColumn<DateTime> postedAt = GeneratedColumn<DateTime>(
+      'posted_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  final VerificationMeta _vposMeta = const VerificationMeta('vpos');
+  @override
+  late final GeneratedColumn<int> vpos = GeneratedColumn<int>(
+      'vpos', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  final VerificationMeta _fetchedAtMeta = const VerificationMeta('fetchedAt');
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+      'fetched_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        room,
+        user,
+        no,
+        content,
+        anonymity,
+        premium,
+        mail,
+        postedAt,
+        vpos,
+        fetchedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? 'uguisu_nicolive_comments';
+  @override
+  String get actualTableName => 'uguisu_nicolive_comments';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<UguisuNicoliveComment> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('room')) {
+      context.handle(
+          _roomMeta, room.isAcceptableOrUnknown(data['room']!, _roomMeta));
+    } else if (isInserting) {
+      context.missing(_roomMeta);
+    }
+    if (data.containsKey('user')) {
+      context.handle(
+          _userMeta, user.isAcceptableOrUnknown(data['user']!, _userMeta));
+    } else if (isInserting) {
+      context.missing(_userMeta);
+    }
+    if (data.containsKey('no')) {
+      context.handle(_noMeta, no.isAcceptableOrUnknown(data['no']!, _noMeta));
+    } else if (isInserting) {
+      context.missing(_noMeta);
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('anonymity')) {
+      context.handle(_anonymityMeta,
+          anonymity.isAcceptableOrUnknown(data['anonymity']!, _anonymityMeta));
+    }
+    if (data.containsKey('premium')) {
+      context.handle(_premiumMeta,
+          premium.isAcceptableOrUnknown(data['premium']!, _premiumMeta));
+    }
+    if (data.containsKey('mail')) {
+      context.handle(
+          _mailMeta, mail.isAcceptableOrUnknown(data['mail']!, _mailMeta));
+    }
+    if (data.containsKey('posted_at')) {
+      context.handle(_postedAtMeta,
+          postedAt.isAcceptableOrUnknown(data['posted_at']!, _postedAtMeta));
+    } else if (isInserting) {
+      context.missing(_postedAtMeta);
+    }
+    if (data.containsKey('vpos')) {
+      context.handle(
+          _vposMeta, vpos.isAcceptableOrUnknown(data['vpos']!, _vposMeta));
+    } else if (isInserting) {
+      context.missing(_vposMeta);
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(_fetchedAtMeta,
+          fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta));
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {room, no},
+      ];
+  @override
+  UguisuNicoliveComment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return UguisuNicoliveComment(
+      id: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      room: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}room'])!,
+      user: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}user'])!,
+      no: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}no'])!,
+      content: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      anonymity: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}anonymity']),
+      premium: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}premium']),
+      mail: attachedDatabase.options.types
+          .read(DriftSqlType.string, data['${effectivePrefix}mail']),
+      postedAt: attachedDatabase.options.types
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}posted_at'])!,
+      vpos: attachedDatabase.options.types
+          .read(DriftSqlType.int, data['${effectivePrefix}vpos'])!,
+      fetchedAt: attachedDatabase.options.types
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}fetched_at'])!,
+    );
+  }
+
+  @override
+  $UguisuNicoliveCommentsTable createAlias(String alias) {
+    return $UguisuNicoliveCommentsTable(attachedDatabase, alias);
+  }
+}
+
 abstract class _$UguisuDatabase extends GeneratedDatabase {
   _$UguisuDatabase(QueryExecutor e) : super(e);
   late final $UguisuNicoliveUsersTable uguisuNicoliveUsers =
@@ -1918,6 +2722,10 @@ abstract class _$UguisuDatabase extends GeneratedDatabase {
       $UguisuNicoliveCommunityIconCachesTable(this);
   late final $UguisuNicoliveProgramsTable uguisuNicolivePrograms =
       $UguisuNicoliveProgramsTable(this);
+  late final $UguisuNicoliveRoomsTable uguisuNicoliveRooms =
+      $UguisuNicoliveRoomsTable(this);
+  late final $UguisuNicoliveCommentsTable uguisuNicoliveComments =
+      $UguisuNicoliveCommentsTable(this);
   @override
   Iterable<TableInfo<Table, dynamic>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1927,7 +2735,9 @@ abstract class _$UguisuDatabase extends GeneratedDatabase {
         uguisuNicoliveUserIconCaches,
         uguisuNicoliveCommunities,
         uguisuNicoliveCommunityIconCaches,
-        uguisuNicolivePrograms
+        uguisuNicolivePrograms,
+        uguisuNicoliveRooms,
+        uguisuNicoliveComments
       ];
   @override
   DriftDatabaseOptions get options =>

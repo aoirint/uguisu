@@ -118,6 +118,7 @@ class UguisuNicoliveComments extends Table {
     UguisuNicoliveCommunities,
     UguisuNicoliveCommunityIconCaches,
     UguisuNicolivePrograms,
+    UguisuNicoliveRooms,
     UguisuNicoliveComments,
   ],
 )
