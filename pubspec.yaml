@@ -52,6 +52,7 @@ dependencies:
   open_filex: ^4.1.1
   drift: ^2.1.0
   sqlite3_flutter_libs: ^0.5.10
+  pool: ^1.5.1
 
 dev_dependencies:
   flutter_test:

@@ -465,7 +465,7 @@ packages:
     source: hosted
     version: "2.1.2"
   pool:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: pool
       url: "https://pub.dartlang.org"
