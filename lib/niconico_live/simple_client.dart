@@ -110,21 +110,21 @@ class NicoadChatMessage extends BaseChatMessage {
 
 class GiftChatMessage extends BaseChatMessage {
   String giftId;
-  String userId;
+  int? userId;
   String userName;
   String giftPoint;
   String unknownArg1;
   String giftName;
-  String unknownArg2;
+  String? unknownArg2;
   GiftChatMessage({
     required chatMessage,
     required this.giftId,
-    required this.userId,
+    this.userId,
     required this.userName,
     required this.giftPoint,
     required this.unknownArg1,
     required this.giftName,
-    required this.unknownArg2,
+    this.unknownArg2,
   }) : super(
     chatMessage: chatMessage,
   );
@@ -357,12 +357,12 @@ class NiconicoLiveSimpleClient {
         final giftArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(giftRawMessage)[0];
 
         final giftId = giftArgs[0];
-        final userId = giftArgs[1];
+        final userId = giftArgs[1] != 'NULL' ? int.parse(giftArgs[1]) : null;
         final userName = giftArgs[2];
         final giftPoint = giftArgs[3];
         final unknownArg1 = giftArgs[4];
         final giftName = giftArgs[5];
-        final unknownArg2 = giftArgs[6];
+        final unknownArg2 = giftArgs.length > 6 ? giftArgs[6] : null;
 
         return GiftChatMessage(
           chatMessage: chatMessage,
