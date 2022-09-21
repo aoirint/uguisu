@@ -1133,7 +1133,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
       final chatMessageIndex = i;
       // logger?.fine('resolveLazyChatMessages: schedule resolving comment no. ${nextChatMessages[chatMessageIndex].chatMessage.no} (${chatMessageIndex+1}/${nextChatMessages.length})');
 
-      localResolverPool.withResource(() async {
+      nextChatMessages[chatMessageIndex] = await localResolverPool.withResource(() async {
         var cm = nextChatMessages[chatMessageIndex];
         // logger?.fine('resolveLazyChatMessages: resolving comment no. ${cm.chatMessage.no}');
 
@@ -1146,14 +1146,14 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           logger?.fine('resolveLazyChatMessages: no. ${cm.chatMessage.no} is DisconnectChatMessage');
           if (disconnect) {
             logger?.info('Close websocket connection due to the disconnect chat message (No. ${cm.chatMessage.no})');
-            simpleClient?.disconnect();
+            await simpleClient?.disconnect();
           } else {
             logger?.fine('resolveLazyChatMessages: Disconnect message no. ${cm.chatMessage.no} is ignored');
           }
         }
 
         // logger?.fine('resolveLazyChatMessages: resolved no. ${cm.chatMessage.no}');
-        nextChatMessages[chatMessageIndex] = cm;
+        return cm;
       });
     }
 
@@ -1165,32 +1165,28 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   }
 
   Future<void> addAllChatMessagesIfNotExists({
-    required Iterable<BaseChatMessage> chatMessages,
+    required Iterable<BaseChatMessage> newChatMessages,
   }) async {
-    var nextChatMessages = [...this.chatMessages];
-
-    for (final chatMessage in chatMessages) {
-      final found = this.chatMessages.any((other) =>
-        chatMessage.chatMessage.thread == other.chatMessage.thread && 
-        chatMessage.chatMessage.no == other.chatMessage.no
-      );
-      if (found) continue;
-
-      nextChatMessages.add(chatMessage);
-    }
-
     // ListViewの個数が変わる前にatBottomを検査
     final isScrollEnd = chatMessageListScrollController.hasClients && chatMessageListScrollController.position.atEdge && chatMessageListScrollController.position.pixels != 0;
 
-    nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+    setState(() {
+      for (final chatMessage in newChatMessages) {
+        final found = chatMessages.any((other) =>
+          chatMessage.chatMessage.thread == other.chatMessage.thread && 
+          chatMessage.chatMessage.no == other.chatMessage.no
+        );
+        if (found) continue;
+
+        chatMessages.add(chatMessage);
+      }
+
+      chatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+    });
 
     mainLogger.fine('addAllChatMessagesIfNotExists: Start resolving lazy messages');
-    nextChatMessages = await resolveAllLazyChatMessages(nextChatMessages, true);
+    // chatMessages = await resolveAllLazyChatMessages(chatMessages, true);
     mainLogger.fine('addAllChatMessagesIfNotExists: Resolved all lazy messages');
-
-    setState(() {
-      this.chatMessages = nextChatMessages;
-    });
 
     // ListViewの個数が変わってから末尾までスクロール
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1200,7 +1196,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     });
 
     final rooms = <NiconicoLiveRoom>[];
-    for (final chatMessage in nextChatMessages) {
+    for (final chatMessage in chatMessages) {
       var room = rooms.firstWhereOrNull((room) => room.thread == chatMessage.chatMessage.thread);
       if (room == null) {
         final rawRoom = simpleClient!.rooms.firstWhere((other) => other.roomMessage.threadId == chatMessage.chatMessage.thread);
@@ -1223,7 +1219,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   Future<void> addChatMessageIfNotExists({
     required BaseChatMessage chatMessage,
   }) async {
-    await addAllChatMessagesIfNotExists(chatMessages: [chatMessage]);
+    await addAllChatMessagesIfNotExists(newChatMessages: [chatMessage]);
   }
 
   void setLivePageUrl({
@@ -1263,8 +1259,10 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           onChatMessage: (chatMessage) {
             logger?.fine('onChatMessage: no. ${chatMessage.chatMessage.no}');
 
-            chatMessageAddPool.withResource(() async {
-              addChatMessageIfNotExists(chatMessage: chatMessage);
+            Future(() async {
+              await chatMessageAddPool.withResource(() async {
+                addChatMessageIfNotExists(chatMessage: chatMessage);
+              });
             });
           },
           onRFrameClosed: (rvalue) {
@@ -1534,7 +1532,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                         await Future.delayed(const Duration(milliseconds: 100));
                       }
 
-                      await addAllChatMessagesIfNotExists(chatMessages: newChatMessages);
+                      await addAllChatMessagesIfNotExists(newChatMessages: newChatMessages);
 
                       setState(() {
                         fetchAllRunning = false;
