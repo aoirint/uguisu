@@ -706,67 +706,69 @@ Future<UguisuNicoliveUser> loadOrFetchUserCacheIncludingAnonymous({
 Future<void> saveLiveComment({
   required NiconicoLiveComment liveComment,
 }) async {
-  final uguisuNicolivePrograms = uguisuDatabase!.uguisuNicolivePrograms;
-  final uguisuNicoliveRooms = uguisuDatabase!.uguisuNicoliveRooms;
-  final uguisuNicoliveComments = uguisuDatabase!.uguisuNicoliveComments;
+  await uguisuDatabase!.transaction(() async {
+    final uguisuNicolivePrograms = uguisuDatabase!.uguisuNicolivePrograms;
+    final uguisuNicoliveRooms = uguisuDatabase!.uguisuNicoliveRooms;
+    final uguisuNicoliveComments = uguisuDatabase!.uguisuNicoliveComments;
 
-  final programCache =  await (uguisuDatabase!.select(uguisuNicolivePrograms)
-    ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.programId.equals(liveComment.programId))
-  ).getSingle();
+    final programCache =  await (uguisuDatabase!.select(uguisuNicolivePrograms)
+      ..where((tbl) => tbl.serviceId.equals('nicolive') & tbl.programId.equals(liveComment.programId))
+    ).getSingle();
 
-  for (final room in liveComment.rooms) {
-    final roomCache = await uguisuDatabase!.into(uguisuNicoliveRooms).insertReturning(
-      UguisuNicoliveRoomsCompanion.insert(
-        program: programCache.id,
-        thread: room.thread,
-        name: room.name,
-        fetchedAt: room.fetchedAt,
-      ),
-      onConflict: DoUpdate.withExcluded(
-        (old, excluded) => UguisuNicoliveRoomsCompanion.custom(
-          name: excluded.name,
-          fetchedAt: excluded.fetchedAt,
-        ),
-        target: [uguisuNicoliveRooms.program, uguisuNicoliveRooms.thread],
-      ),
-    );
-
-    for (final chatMessage in room.chatMessages) {
-      // 匿名ユーザID（非数値ID）
-      final isAnonymous = chatMessage.anonymity == 1;
-
-      // create or update user record (including anonymous user)
-      final userCache = await loadOrFetchUserCacheIncludingAnonymous(isAnonymous: isAnonymous, userId: chatMessage.userId);
-
-      await uguisuDatabase!.into(uguisuNicoliveComments).insert(
-        UguisuNicoliveCommentsCompanion.insert(
-          room: roomCache.id,
-          user: userCache.id,
-          no: chatMessage.no,
-          content: chatMessage.content,
-          anonymity: Value(chatMessage.anonymity),
-          premium: Value(chatMessage.premium),
-          mail: Value(chatMessage.mail),
-          postedAt: DateTime.fromMicrosecondsSinceEpoch(chatMessage.date * 1000 * 1000 + chatMessage.dateUsec, isUtc: true).toUtc(),
-          vpos: chatMessage.vpos,
-          fetchedAt: chatMessage.fetchedAt,
+    for (final room in liveComment.rooms) {
+      final roomCache = await uguisuDatabase!.into(uguisuNicoliveRooms).insertReturning(
+        UguisuNicoliveRoomsCompanion.insert(
+          program: programCache.id,
+          thread: room.thread,
+          name: room.name,
+          fetchedAt: room.fetchedAt,
         ),
         onConflict: DoUpdate.withExcluded(
-          (old, excluded) => UguisuNicoliveCommentsCompanion.custom(
-            user: excluded.user,
-            content: excluded.content,
-            anonymity: excluded.anonymity,
-            premium: excluded.premium,
-            mail: excluded.mail,
-            postedAt: excluded.postedAt,
-            vpos: excluded.vpos,
+          (old, excluded) => UguisuNicoliveRoomsCompanion.custom(
+            name: excluded.name,
             fetchedAt: excluded.fetchedAt,
           ),
-          target: [uguisuNicoliveComments.room, uguisuNicoliveComments.no],
+          target: [uguisuNicoliveRooms.program, uguisuNicoliveRooms.thread],
         ),
       );
+
+      for (final chatMessage in room.chatMessages) {
+        // 匿名ユーザID（非数値ID）
+        final isAnonymous = chatMessage.anonymity == 1;
+
+        // create or update user record (including anonymous user)
+        final userCache = await loadOrFetchUserCacheIncludingAnonymous(isAnonymous: isAnonymous, userId: chatMessage.userId);
+
+        await uguisuDatabase!.into(uguisuNicoliveComments).insert(
+          UguisuNicoliveCommentsCompanion.insert(
+            room: roomCache.id,
+            user: userCache.id,
+            no: chatMessage.no,
+            content: chatMessage.content,
+            anonymity: Value(chatMessage.anonymity),
+            premium: Value(chatMessage.premium),
+            mail: Value(chatMessage.mail),
+            postedAt: DateTime.fromMicrosecondsSinceEpoch(chatMessage.date * 1000 * 1000 + chatMessage.dateUsec, isUtc: true).toUtc(),
+            vpos: chatMessage.vpos,
+            fetchedAt: chatMessage.fetchedAt,
+          ),
+          onConflict: DoUpdate.withExcluded(
+            (old, excluded) => UguisuNicoliveCommentsCompanion.custom(
+              user: excluded.user,
+              content: excluded.content,
+              anonymity: excluded.anonymity,
+              premium: excluded.premium,
+              mail: excluded.mail,
+              postedAt: excluded.postedAt,
+              vpos: excluded.vpos,
+              fetchedAt: excluded.fetchedAt,
+            ),
+            target: [uguisuNicoliveComments.room, uguisuNicoliveComments.no],
+          ),
+        );
+      }
     }
-  }
+  });
 }
 
 class NiconicoLoginUser {
