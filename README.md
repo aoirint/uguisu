@@ -11,3 +11,7 @@ Cross-OS Comment Viewer built on Flutter/Dart.
 ## Supported services
 
 - ニコニコ生放送: <https://live.nicovideo.jp/>
+
+## Development
+
+- [Development Guide](DEVELOPMENT_GUIDE.md)

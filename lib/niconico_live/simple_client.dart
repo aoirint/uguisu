@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:csv/csv.dart';
 import 'package:logging/logging.dart';
 import 'package:uguisu/main.dart';
+import 'package:uguisu/niconico_live/community_icon_cache_client.dart';
+import 'package:uguisu/niconico_live/community_page_cache_client.dart';
 import 'package:uguisu/niconico_live/user_page_cache_client.dart';
 import 'live_page_client.dart';
 import 'watch_client.dart';
@@ -12,10 +14,12 @@ import 'user_icon_cache_client.dart';
 class Room {
   RoomMessage roomMessage;
   NiconicoLiveCommentClient commentClient;
+  DateTime fetchedAt;
 
   Room({
     required this.roomMessage,
     required this.commentClient,
+    required this.fetchedAt,
   });
 }
 
@@ -155,9 +159,14 @@ class NiconicoLiveSimpleClient {
   final String userAgent;
 
   NiconicoLoginCookie? loginCookie;
+
   Future<Uri> Function(int userId)? getUserPageUri;
-  NiconicoUserIconCacheClient? userIconCacheClient;
   NiconicoUserPageCacheClient? userPageCacheClient;
+  NiconicoUserIconCacheClient? userIconCacheClient;
+  
+  Future<Uri> Function(String communityId)? getCommunityPageUri;
+  NiconicoCommunityPageCacheClient? communityPageCacheClient;
+  NiconicoCommunityIconCacheClient? communityIconCacheClient;
 
   String? livePageUrl;
   NiconicoLivePage? livePage;
@@ -181,33 +190,51 @@ class NiconicoLiveSimpleClient {
 
   Future<void> initialize({
     NiconicoLoginCookie? loginCookie,
-    required Future<NiconicoUserIconCache?> Function(int userId) userIconLoadCacheOrNull,
-    required Future<void> Function(NiconicoUserIconCache userIcon) userIconSaveCache,
     required Future<Uri> Function(int userId) getUserPageUri,
     required Future<NiconicoUserPageCache?> Function(int userId) userPageLoadCacheOrNull,
     required Future<void> Function(NiconicoUserPageCache userPage) userPageSaveCache,
+    required Future<NiconicoUserIconCache?> Function(int userId) userIconLoadCacheOrNull,
+    required Future<void> Function(NiconicoUserIconCache userIcon) userIconSaveCache,
+    required Future<Uri> Function(String communityId) getCommunityPageUri,
+    required Future<NiconicoCommunityPageCache?> Function(String communityId) communityPageLoadCacheOrNull,
+    required Future<void> Function(NiconicoCommunityPageCache communityPage) communityPageSaveCache,
+    required Future<NiconicoCommunityIconCache?> Function(String communityId) communityIconLoadCacheOrNull,
+    required Future<void> Function(NiconicoCommunityIconCache communityIcon) communityIconSaveCache,
   }) async {
     this.loginCookie = loginCookie;
     this.getUserPageUri = getUserPageUri;
 
-    final userIconCacheClient = NiconicoUserIconCacheClient(
-      cookieJar: loginCookie?.cookieJar,
-      userAgent: userAgent,
-      loadCacheOrNull: userIconLoadCacheOrNull,
-      saveCache: userIconSaveCache,
-    );
-    this.userIconCacheClient = userIconCacheClient;
-
-    final userPageCacheClient = NiconicoUserPageCacheClient(
+    userPageCacheClient = NiconicoUserPageCacheClient(
       cookieJar: loginCookie?.cookieJar,
       userAgent: userAgent,
       loadCacheOrNull: userPageLoadCacheOrNull,
       saveCache: userPageSaveCache,
     );
-    this.userPageCacheClient = userPageCacheClient;
+
+    userIconCacheClient = NiconicoUserIconCacheClient(
+      cookieJar: loginCookie?.cookieJar,
+      userAgent: userAgent,
+      loadCacheOrNull: userIconLoadCacheOrNull,
+      saveCache: userIconSaveCache,
+    );
+
+    this.getCommunityPageUri = getCommunityPageUri;
+
+    communityPageCacheClient = NiconicoCommunityPageCacheClient(
+      cookieJar: loginCookie?.cookieJar,
+      userAgent: userAgent,
+      loadCacheOrNull: communityPageLoadCacheOrNull,
+      saveCache: communityPageSaveCache,
+    );
+
+    communityIconCacheClient = NiconicoCommunityIconCacheClient(
+      userAgent: userAgent,
+      loadCacheOrNull: communityIconLoadCacheOrNull,
+      saveCache: communityIconSaveCache,
+    );
   }
 
-  Future<void> connect({
+  Future<void> fetchLivePage({
     required String livePageUrl, // https://live.nicovideo.jp/watch/lv000000000
     required Function(ScheduleMessage scheduleMessage) onScheduleMessage,
     required Function(StatisticsMessage statisticsMessage) onStatisticsMessage,
@@ -227,14 +254,20 @@ class NiconicoLiveSimpleClient {
     );
     this.livePage = livePage;
 
-    // ケース: 一般会員・非ログイン時の放送終了済み番組に接続した
+    // 空文字列: 一般会員・非ログイン時の放送終了済み番組に接続した
     if (livePage.webSocketUrl == '') {
       throw NoWatchWebSocketUrlFoundException('No watch web socket url found. Maybe you have no access to the requested program.');
     }
+  }
+
+  Future<void> connect() async {
+    if (livePage == null) {
+      throw Exception('Live page must be set before connect');
+    }
 
     NiconicoLiveWatchClient watchClient = NiconicoLiveWatchClient();
-    watchClient.connect(
-      websocketUrl: livePage.webSocketUrl,
+    await watchClient.connect(
+      websocketUrl: livePage!.webSocketUrl,
       userAgent: userAgent,
       onRoomMessage: __onRoomMessage,
       onScheduleMessage: __onScheduleMessage,
@@ -256,6 +289,7 @@ class NiconicoLiveSimpleClient {
     final commentServerWebSocketUrl = roomMessage.messageServer.uri;
     final thread = roomMessage.threadId;
     final threadkey = roomMessage.yourPostKey;
+    final fetchedAt = DateTime.now().toUtc();
 
     final commentClient = NiconicoLiveCommentClient();
     commentClient.connect(
@@ -268,7 +302,7 @@ class NiconicoLiveSimpleClient {
       onRFrameClosed: onRFrameClosed,
     );
 
-    rooms.add(Room(roomMessage: roomMessage, commentClient: commentClient));
+    rooms.add(Room(roomMessage: roomMessage, commentClient: commentClient, fetchedAt: fetchedAt));
   }
 
   BaseChatMessage parseChatMessage(ChatMessage chatMessage) {
@@ -291,9 +325,11 @@ class NiconicoLiveSimpleClient {
         if (userPageUri == null) {
           throw Exception('getUserPageUri != null');
         }
+        if (userPageCacheClient == null) { throw Exception('userPageCacheClient != null'); }
+        if (userIconCacheClient == null) { throw Exception('userIconCacheClient != null'); }
 
-        final userPageCache = await userPageCacheClient?.loadOrFetchUserPage(userId: userIdInt, userPageUri: userPageUri);
-        final userIconCache = userPageCache != null ? await userIconCacheClient?.loadOrFetchIcon(userId: userIdInt, iconUri: Uri.parse(userPageCache.userPage.iconUrl)) : null;
+        final userPageCache = await userPageCacheClient!.loadOrFetchUserPage(userId: userIdInt, userPageUri: userPageUri);
+        final userIconCache = await userIconCacheClient!.loadOrFetchIcon(userId: userIdInt, iconUri: Uri.parse(userPageCache.userPage.iconUrl!));
 
         return CommentUser(userId: userIdInt, userPageCache: userPageCache, userIconCache: userIconCache);
       },);
@@ -352,7 +388,9 @@ class NiconicoLiveSimpleClient {
 
       if (comment.startsWith('/gift')) {
         // ギフト
-        // /gift ギフトID ユーザーID \"ユーザー名\" ギフトポイント \"\" \"ギフト名\" 匿名フラグ？
+        // 匿名ギフト(6列):  /gift gourmet_zundamoti NULL \"名無し\" 300 \"\" \"ずんだ餅\"
+        // 非匿名ギフト(7列): /gift gourmet_kiritanpo 100 "DUMMY_USER" 600 "" "きりたんぽ" 1
+        //                   /gift ギフトID ユーザーID \"ユーザー名\" ギフトポイント \"\" \"ギフト名\" 1
         final giftRawMessage = comment.substring(comment.indexOf(' ')+1).trim();
         final giftArgs = const CsvToListConverter(fieldDelimiter: ' ', shouldParseNumbers: false).convert(giftRawMessage)[0];
 

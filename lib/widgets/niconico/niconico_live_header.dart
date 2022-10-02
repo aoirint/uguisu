@@ -19,10 +19,14 @@ class NiconicoLiveHeader extends StatefulWidget {
   final String liveTitle;
   final DateTime liveBeginDateTime;
 
+  final NiconicoUserPageUriResolver userPageUriResolver;
   final NiconicoUserIconImageBytesResolver userIconImageBytesResolver;
   final NiconicoLocalCachedUserIconImageFileResolver userLocalCachedIconImageFileResolver;
-  final NiconicoUserPageUriResolver userPageUriResolver;
+
   final NiconicoCommunityPageUriResolver communityPageUriResolver;
+  final NiconicoCommunityIconImageBytesResolver communityIconImageBytesResolver;
+  final NiconicoLocalCachedCommunityIconImageFileResolver communityLocalCachedIconImageFileResolver;
+
 
   final int supplierUserId;
   final String supplierUserName;
@@ -36,10 +40,12 @@ class NiconicoLiveHeader extends StatefulWidget {
     required this.liveId,
     required this.liveTitle,
     required this.liveBeginDateTime,
+    required this.userPageUriResolver,
     required this.userIconImageBytesResolver,
     required this.userLocalCachedIconImageFileResolver,
-    required this.userPageUriResolver,
     required this.communityPageUriResolver,
+    required this.communityIconImageBytesResolver,
+    required this.communityLocalCachedIconImageFileResolver,
     required this.supplierUserId,
     required this.supplierUserName,
     required this.supplierCommunityId,

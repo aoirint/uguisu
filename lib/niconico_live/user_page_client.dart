@@ -8,13 +8,15 @@ import 'package:uguisu/niconico_live/cookie_util.dart';
 
 class NiconicoUserPage {
   int id;
-  String nickname;
-  String iconUrl;
+  bool anonymity;
+  String? nickname;
+  String? iconUrl;
 
   NiconicoUserPage({
     required this.id,
-    required this.nickname,
-    required this.iconUrl,
+    required this.anonymity,
+    this.nickname,
+    this.iconUrl,
   });
 }
 
@@ -22,7 +24,7 @@ class NiconicoUserPageClient {
   late Logger logger;
 
   NiconicoUserPageClient() {
-    logger = Logger('NiconicoUserPageClient');
+    logger = Logger('com.aoirint.uguisu.niconico_live.NiconicoUserPageClient#$hashCode');
   }
 
   Future<NiconicoUserPage> get({
@@ -61,6 +63,7 @@ class NiconicoUserPageClient {
 
     return NiconicoUserPage(
       id: id,
+      anonymity: false,
       nickname: nickname,
       iconUrl: iconUrl,
     );

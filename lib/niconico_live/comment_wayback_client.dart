@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:isolate';
 import 'package:logging/logging.dart';
 import 'package:uguisu/niconico_live/comment_client.dart';
 
@@ -108,6 +107,7 @@ class NiconicoLiveCommentWaybackClient {
               thread: chat['thread'],
               userId: chat['user_id'],
               vpos: chat['vpos'],
+              fetchedAt: DateTime.now().toUtc(),
             ));
           }
         },

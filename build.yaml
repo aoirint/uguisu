@@ -1,0 +1,7 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options:
+          # https://drift.simonbinder.eu/docs/advanced-features/builder_options/
+          store_date_time_values_as_text: true
