@@ -1106,7 +1106,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   NiconicoCommunityIconCache? livePageSupplierCommunityIconCache;
   ScheduleMessage? scheduleMessage;
   StatisticsMessage? statisticsMessage;
-  List<BaseChatMessage> chatMessages = [];
+  List<BaseChatMessage> unsortedChatMessages = [];
+  List<BaseChatMessage> sortedChatMessages = [];
 
   bool fetchAllRunning = false;
 
@@ -1167,29 +1168,30 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   Future<void> addAllChatMessagesIfNotExists({
     required Iterable<BaseChatMessage> chatMessages,
   }) async {
-    var nextChatMessages = [...this.chatMessages];
+    logger?.warning('update ChatMessages');
 
     for (final chatMessage in chatMessages) {
-      final found = this.chatMessages.any((other) =>
+      final found = unsortedChatMessages.any((other) =>
         chatMessage.chatMessage.thread == other.chatMessage.thread && 
         chatMessage.chatMessage.no == other.chatMessage.no
       );
       if (found) continue;
 
-      nextChatMessages.add(chatMessage);
+      unsortedChatMessages.add(chatMessage);
     }
 
     // ListViewの個数が変わる前にatBottomを検査
     final isScrollEnd = chatMessageListScrollController.hasClients && chatMessageListScrollController.position.atEdge && chatMessageListScrollController.position.pixels != 0;
 
-    nextChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
+    var nextSortedChatMessages = [...unsortedChatMessages];
+    nextSortedChatMessages.sort((a, b) => a.chatMessage.no.compareTo(b.chatMessage.no));
 
     mainLogger.fine('addAllChatMessagesIfNotExists: Start resolving lazy messages');
-    nextChatMessages = await resolveAllLazyChatMessages(nextChatMessages, true);
+    nextSortedChatMessages = await resolveAllLazyChatMessages(nextSortedChatMessages, true);
     mainLogger.fine('addAllChatMessagesIfNotExists: Resolved all lazy messages');
 
     setState(() {
-      this.chatMessages = nextChatMessages;
+      sortedChatMessages = nextSortedChatMessages;
     });
 
     // ListViewの個数が変わってから末尾までスクロール
@@ -1200,7 +1202,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
     });
 
     final rooms = <NiconicoLiveRoom>[];
-    for (final chatMessage in nextChatMessages) {
+    for (final chatMessage in unsortedChatMessages) {
       var room = rooms.firstWhereOrNull((room) => room.thread == chatMessage.chatMessage.thread);
       if (room == null) {
         final rawRoom = simpleClient!.rooms.firstWhere((other) => other.roomMessage.threadId == chatMessage.chatMessage.thread);
@@ -1238,7 +1240,8 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
         livePage = null;
         scheduleMessage = null;
         statisticsMessage = null;
-        chatMessages.clear();
+        unsortedChatMessages.clear();
+        sortedChatMessages.clear();
       });
 
       try {
@@ -1358,9 +1361,9 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
   }
 
   int? getMinCommentNo() {
-    if (chatMessages.isEmpty) return null;
+    if (unsortedChatMessages.isEmpty) return null;
 
-    final minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+    final minNoChatMessage = unsortedChatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
     final minNo = minNoChatMessage.chatMessage.no;
     return minNo;
   }
@@ -1446,7 +1449,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
           livePage == null ? Expanded(child: Container()) : NiconicoLiveCommentList(
             chatMessageListScrollController: chatMessageListScrollController,
             liveBeginDateTime: DateTime.fromMillisecondsSinceEpoch(livePage!.program.beginTime * 1000, isUtc: true),
-            chatMessages: chatMessages,
+            chatMessages: sortedChatMessages,
             userLocalCachedIconImageFileResolver: SimpleNiconicoLocalCachedUserIconImageFileResolver(),
             userPageUriResolver: SimpleNiconicoUserPageUriResolver(),
             commentTimeFormatElapsed: configData.config.commentTimeFormatElapsed,
@@ -1471,7 +1474,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                   message: '未取得コメントをすべて取得',
                   child: ElevatedButton(
                     onPressed: livePage == null || loginCookieData.loginCookie == null || getMinCommentNo() == 1 || fetchAllRunning ? null : () async {
-                      if (chatMessages.isEmpty) {
+                      if (unsortedChatMessages.isEmpty) {
                         logger?.warning('No fetched chat messages');
                         return;
                       }
@@ -1493,7 +1496,7 @@ class _NiconicoLivePageWidgetState extends State<NiconicoLivePageWidget> {
                       // final maxNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no > next.chatMessage.no ? cur : next);
                       // final maxNo = maxNoChatMessage.chatMessage.no;
 
-                      var minNoChatMessage = chatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
+                      var minNoChatMessage = unsortedChatMessages.reduce((cur, next) => cur.chatMessage.no < next.chatMessage.no ? cur : next);
                       var minNo = minNoChatMessage.chatMessage.no;
                       var minWhen = DateTime.fromMicrosecondsSinceEpoch(minNoChatMessage.chatMessage.date * 1000 * 1000 + minNoChatMessage.chatMessage.dateUsec);
 
